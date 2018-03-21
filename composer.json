@@ -1,0 +1,16 @@
+{
+  "name": "devmakis/prodcalendar",
+  "type": "library",
+  "authors": [
+    {
+      "name": "Kiselev Maxim",
+      "email": "kiselevmax1985@yandex.ru"
+    }
+  ],
+  "require": {},
+  "autoload": {
+    "psr-4": {
+      "Devmakis\\ProdCalendar\\": "src/"
+    }
+  }
+}
