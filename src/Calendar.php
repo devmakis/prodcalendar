@@ -49,7 +49,7 @@ class Calendar
     }
 
     /**
-     * Найти день производственного календаря
+     * Найти месяц из производственного календаря
      * @param \DateTime $date
      * @return Month
      * @throws CalendarException
@@ -65,7 +65,7 @@ class Calendar
     }
 
     /**
-     * Найти день производственного календаря
+     * Найти день из производственного календаря
      * @param \DateTime $date
      * @return Day|null
      * @throws CalendarException
