@@ -1,143 +1,279 @@
 <?php
-/**
- * Created by PhpStorm.
- * User: MAKis
- * Date: 20.03.2018
- * Time: 8:31
- */
 
 namespace Devmakis\ProdCalendar;
 
+use Devmakis\ProdCalendar\Clients\DataGovClient;
 use Devmakis\ProdCalendar\Exceptions\CalendarException;
+use Devmakis\ProdCalendar\Clients\ClientException;
 
+/**
+ * Class Calendar производственный календарь
+ * @package Devmakis\ProdCalendar
+ */
 class Calendar
 {
     /**
-     * @var int номер года
+     * @var DataGovClient
      */
-
-    protected $year;
-
-    /**
-     * @var Month[]|array массив объектов месяцев
-     */
-    protected $months = [];
+    private $client;
 
     /**
-     * @var int всего рабочих дней в году
+     * @var Year[]
      */
-    protected $totalWorkingDays;
-
-    /**
-     * @var int всего праздничных и выходных дней в году
-     */
-    protected $totalNonworkingDays;
-
-    /**
-     * @var int количество рабочих часов при 40-часовой рабочей неделе
-     */
-    protected $numWorkingHours40;
-
-    /**
-     * @var int количество рабочих часов при 36-часовой рабочей неделе
-     */
-    protected $numWorkingHours36;
-
-    /**
-     * @var int количество рабочих часов при 24-часовой рабочей неделе
-     */
-    protected $numWorkingHours24;
+    private $years = [];
 
     /**
      * Calendar constructor.
-     * @param Client $client - клиент сервиса, который предоставляет данные
-     * @param int $year - номер года
-     * @throws Exceptions\ClientException
-     * @throws CalendarException
+     * @param DataGovClient $client
      */
-    public function __construct(Client $client, $year)
+    public function __construct(DataGovClient $client)
     {
-        $year = (int)$year;
-        $response = $client->requestData();
+        $this->client = $client;
+    }
 
-        foreach ($response as $row) {
-            $responseYear = (int)$row[Client::API_DATA_KEYS['YEAR']];
+    /**
+     * @param $numberY
+     * @return Year
+     * @throws CalendarException
+     * @throws ClientException
+     */
+    public function getYear($numberY)
+    {
+        $numberY = (int)$numberY;
 
-            if ($responseYear !== $year) {
-                continue;
-            }
-
-            $this->year = $responseYear;
-            $this->totalWorkingDays = (int)$row[Client::API_DATA_KEYS['TOTAL_WORKING_DAYS']];
-            $this->totalNonworkingDays = (int)$row[Client::API_DATA_KEYS['TOTAL_NONWORKING_DAYS']];
-            $this->numWorkingHours40 = (int)$row[Client::API_DATA_KEYS['NUM_WORKING_HOURS_40']];
-            $this->numWorkingHours36 = (int)$row[Client::API_DATA_KEYS['NUM_WORKING_HOURS_36']];
-            $this->numWorkingHours24 = (int)$row[Client::API_DATA_KEYS['NUM_WORKING_HOURS_24']];
-
-            foreach (Client::API_DATA_KEYS['MONTHS'] as $numberMonth => $keyMonth) {
-                $days = explode(Client::API_DELIMITER_DAYS, $row[$keyMonth]);
-                $this->months[$numberMonth] = new Month($numberMonth, $days);
-            }
-
-            return;
+        if (!isset($this->years[$numberY])) {
+            $this->years[$numberY] = $this->client->getYear($numberY);
         }
 
-        throw new CalendarException("Production calendar is not found for {$this->year} year");
+        return $this->years[$numberY];
     }
 
     /**
+     * Найти день производственного календаря
+     * @param \DateTime $date
+     * @return Month
+     * @throws CalendarException
+     * @throws ClientException
+     */
+    public function findMonth(\DateTime $date)
+    {
+        $y = $date->format('Y');
+        $m = $date->format('n');
+        $month = $this->getYear($y)->getMonth($m);
+
+        return $month;
+    }
+
+    /**
+     * Найти день производственного календаря
+     * @param \DateTime $date
+     * @return Day|null
+     * @throws CalendarException
+     * @throws ClientException
+     */
+    public function findDay(\DateTime $date)
+    {
+        $month = $this->findMonth($date);
+        $d = $date->format('j');
+
+        try {
+            $day = $month->findNonWorkingDay($d);
+        } catch (CalendarException $e) {
+            $day = $month->findPreHolidayDay($d);
+        }
+
+        return $day;
+    }
+
+    /**
+     * Проверить является ли день праздничным
+     * @param \DateTime $date
+     * @return bool
+     * @throws CalendarException
+     * @throws ClientException
+     */
+    public function isHoliday(\DateTime $date)
+    {
+        return $this->findDay($date) instanceof Holiday;
+    }
+
+    /**
+     * Проверить является ли день предпраздничным
+     * @param \DateTime $date
+     * @return bool
+     * @throws CalendarException
+     * @throws ClientException
+     */
+    public function isPreHoliday(\DateTime $date)
+    {
+        return $this->findDay($date) instanceof PreHolidayDay;
+    }
+
+    /**
+     * Проверить является ли день выходным
+     * @param \DateTime $date
+     * @return bool
+     * @throws CalendarException
+     * @throws ClientException
+     */
+    public function isWeekend(\DateTime $date)
+    {
+        return $this->findDay($date) instanceof Weekend;
+    }
+
+    /**
+     * Проверить является ли день нерабочим
+     * @param \DateTime $date
+     * @return bool
+     * @throws CalendarException
+     * @throws ClientException
+     */
+    public function isNonWorking(\DateTime $date)
+    {
+        return $this->isWeekend($date) || $this->isHoliday($date);
+    }
+
+    /**
+     * Подсчитать количество рабочих дней за период
+     * @param \DateTime $begin
+     * @param \DateTime $end
      * @return int
+     * @throws CalendarException
+     * @throws ClientException
      */
-    public function getYear()
+    public function countWorkingDaysForPeriod(\DateTime $begin, \DateTime $end)
     {
-        return $this->year;
+        /**
+         * @var null|Month $prevMonth
+         * @var \DateTime $dateD
+         * @var \DateTime $dateD
+         */
+        $count = 0;
+        $monthBegin = $this->findMonth($begin);
+        $monthEnd = $this->findMonth($end);
+
+        $beginM = clone $begin;
+        $beginM->modify('first day of this month');
+        $intervalM = \DateInterval::createFromDateString('1 month');
+        $periodM = new \DatePeriod($beginM, $intervalM, $end);
+        $prevMonth = null;
+
+        foreach ($periodM as $date) {
+            /**
+             * @var \DateTime $date
+             */
+            $month = $this->findMonth($date);
+
+            if ($prevMonth && $month->getNumberM() == $prevMonth->getNumberM()) {
+                continue;
+            } elseif ($month->getNumberM() == $monthBegin->getNumberM()) {
+                $endD = clone $date;
+                $endD = $endD->modify('last day of this month');;
+
+                $intervalD = \DateInterval::createFromDateString('1 day');
+                $periodD = new \DatePeriod($begin, $intervalD, $endD);
+
+                foreach ($periodD as $dateD) {
+                    try {
+                        $month->findNonWorkingDay((int)$dateD->format('j'));
+                    } catch (CalendarException $e) {
+                        $count++;
+                    }
+                }
+            } elseif ($month->getNumberM() == $monthEnd->getNumberM()) {
+                $beginD = clone $date;
+                $beginD = $beginD->modify('first day of this month');
+
+                $intervalD = \DateInterval::createFromDateString('1 day');
+                $periodD = new \DatePeriod($beginD, $intervalD, $end);
+
+                foreach ($periodD as $dateD) {
+                    try {
+                        $month->findNonWorkingDay((int)$dateD->format('j'));
+                    } catch (CalendarException $e) {
+                        $count++;
+                    }
+                }
+            } else {
+                $count += $month->countWorkingDay();
+            }
+
+            $prevMonth = $month;
+        }
+
+        return $count;
     }
 
     /**
-     * @return Month[]
-     */
-    public function getMonths()
-    {
-        return $this->months;
-    }
-
-    /**
+     * Подсчитать количество нерабочих дней за период
+     * @param \DateTime $begin
+     * @param \DateTime $end
      * @return int
+     * @throws CalendarException
+     * @throws ClientException
      */
-    public function getTotalWorkingDays()
+    public function countNonWorkingDaysForPeriod(\DateTime $begin, \DateTime $end)
     {
-        return $this->totalWorkingDays;
-    }
+        /**
+         * @var null|Month $prevMonth
+         * @var \DateTime $dateD
+         * @var \DateTime $dateD
+         */
+        $count = 0;
+        $monthBegin = $this->findMonth($begin);
+        $monthEnd = $this->findMonth($end);
 
-    /**
-     * @return int
-     */
-    public function getTotalNonworkingDays()
-    {
-        return $this->totalNonworkingDays;
-    }
+        $beginM = clone $begin;
+        $beginM->modify('first day of this month');
+        $intervalM = \DateInterval::createFromDateString('1 month');
+        $periodM = new \DatePeriod($beginM, $intervalM, $end);
+        $prevMonth = null;
 
-    /**
-     * @return int
-     */
-    public function getNumWorkingHours40()
-    {
-        return $this->numWorkingHours40;
-    }
+        foreach ($periodM as $date) {
+            /**
+             * @var \DateTime $date
+             */
+            $month = $this->findMonth($date);
 
-    /**
-     * @return int
-     */
-    public function getNumWorkingHours36()
-    {
-        return $this->numWorkingHours36;
-    }
+            if ($prevMonth && $month->getNumberM() == $prevMonth->getNumberM()) {
+                continue;
+            } elseif ($month->getNumberM() == $monthBegin->getNumberM()) {
+                $endD = clone $date;
+                $endD = $endD->modify('last day of this month');;
 
-    /**
-     * @return int
-     */
-    public function getNumWorkingHours24()
-    {
-        return $this->numWorkingHours24;
+                $intervalD = \DateInterval::createFromDateString('1 day');
+                $periodD = new \DatePeriod($begin, $intervalD, $endD);
+
+                foreach ($periodD as $dateD) {
+                    try {
+                        $month->findNonWorkingDay((int)$dateD->format('j'));
+                        $count++;
+                    } catch (CalendarException $e) {
+                        continue;
+                    }
+                }
+            } elseif ($month->getNumberM() == $monthEnd->getNumberM()) {
+                $beginD = clone $date;
+                $beginD = $beginD->modify('first day of this month');
+
+                $intervalD = \DateInterval::createFromDateString('1 day');
+                $periodD = new \DatePeriod($beginD, $intervalD, $end);
+
+                foreach ($periodD as $dateD) {
+                    try {
+                        $month->findNonWorkingDay((int)$dateD->format('j'));
+                        $count++;
+                    } catch (CalendarException $e) {
+                        continue;
+                    }
+                }
+            } else {
+                $count += $month->countNonWorkingDay();
+            }
+
+            $prevMonth = $month;
+        }
+
+        return $count;
     }
 }

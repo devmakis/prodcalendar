@@ -2,6 +2,8 @@
 
 namespace Devmakis\ProdCalendar;
 
+use Devmakis\ProdCalendar\Exceptions\CalendarException;
+
 /**
  * Class Month - месяц производственного календаря
  * @package Devmakis\ProdCalendar
@@ -9,56 +11,54 @@ namespace Devmakis\ProdCalendar;
 class Month
 {
     /**
-     * @var int номер месяца
+     * @var string номер месяца
      */
-    protected $number;
+    protected $numberM;
 
     /**
-     * @var NonWorkingDay[]|array не рабочие дни в месяце
+     * @var int номер года
+     */
+    protected $numberY;
+
+    /**
+     * @var Day[] нерабочие дни в месяце
      */
     protected $nonWorkingDays = [];
 
     /**
-     * @var PreHolidayDay[]|array предпраздничные дни
+     * @var PreHolidayDay[] предпраздничные дни
      */
     protected $preHolidayDays = [];
 
     /**
      * Month constructor.
-     * @param int $number
-     * @param array $days
+     * @param string $numberM
+     * @param $numberY
+     * @param Day[] $nonWorkingDays
+     * @param PreHolidayDay[] $preHolidayDays
      */
-    public function __construct($number, array $days)
+    public function __construct($numberM, $numberY, array $nonWorkingDays, array $preHolidayDays)
     {
-        $this->number = $number;
-
-        foreach ($days as $day) {
-            if (strpos($day, Client::API_LABEL_PRE_HOLIDAY) !== false) {
-                $day = (int)str_replace(Client::API_LABEL_PRE_HOLIDAY, '', $day);
-                $preHolidayDay = new PreHolidayDay($day);
-                $preHolidayDay->setDescription('Предпраздничный день');
-                $this->preHolidayDays[$day] = $preHolidayDay;
-
-                continue;
-            }
-
-            $nonWorkingDay = new NonWorkingDay($day);
-            $nonWorkingDay->setDescription('Не рабочий день');
-            $this->nonWorkingDays[$day] = $nonWorkingDay;
+        if (strlen($numberM) == 1) {
+            $numberM = '0' . $numberM;
         }
 
+        $this->numberM = (string)$numberM;
+        $this->numberY = (string)$numberY;
+        $this->nonWorkingDays = $nonWorkingDays;
+        $this->preHolidayDays = $preHolidayDays;
     }
 
     /**
-     * @return int
+     * @return string
      */
-    public function getNumber()
+    public function getNumberM()
     {
-        return $this->number;
+        return $this->numberM;
     }
 
     /**
-     * @return NonWorkingDay[]
+     * @return Weekend[]
      */
     public function getNonWorkingDays()
     {
@@ -71,5 +71,56 @@ class Month
     public function getPreHolidayDays()
     {
         return $this->preHolidayDays;
+    }
+
+    /**
+     * Найти нерабочий день
+     * @param $d
+     * @return Day
+     * @throws CalendarException
+     */
+    public function findNonWorkingDay($d)
+    {
+        if (!isset($this->nonWorkingDays[$d])) {
+            throw new CalendarException("Day «{$d}» not found");
+        }
+
+        return $this->nonWorkingDays[$d];
+    }
+
+    /**
+     * Найти предпраздничный день
+     * @param $d
+     * @return Day
+     * @throws CalendarException
+     */
+    public function findPreHolidayDay($d)
+    {
+        $d = (int)$d;
+
+        if (!isset($this->preHolidayDays[$d])) {
+            throw new CalendarException("Day «{$d}» not found");
+        }
+
+        return $this->preHolidayDays[$d];
+    }
+
+    /**
+     * Подсчитать количество нерабочих дней в месяце
+     * @return int
+     */
+    public function countNonWorkingDay()
+    {
+        return count($this->nonWorkingDays);
+    }
+
+    /**
+     * Подсчитать количество рабочих дней в месяце
+     * @return int
+     */
+    public function countWorkingDay()
+    {
+        $countDays = (new \DateTime("01-{$this->numberM}-{$this->numberY}"))->format('t');
+        return $countDays - count($this->nonWorkingDays);
     }
 }

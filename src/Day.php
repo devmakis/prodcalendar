@@ -9,9 +9,32 @@ namespace Devmakis\ProdCalendar;
 class Day
 {
     /**
-     * @var int номер месяца
+     * Название дней недели
      */
-    protected $number;
+    const NAME_DAYS_RU = [
+        1 => 'Понедельник',
+        2 => 'Вторник',
+        3 => 'Среда',
+        4 => 'Четверг',
+        5 => 'Пятница',
+        6 => 'Суббота',
+        7 => 'Воскресенье',
+    ];
+
+    /**
+     * @var string номер дня
+     */
+    protected $numberD;
+
+    /**
+     * @var string номер месяца
+     */
+    protected $numberM;
+
+    /**
+     * @var int номер года
+     */
+    protected $numberY;
 
     /**
      * @var string описание дня
@@ -20,19 +43,47 @@ class Day
 
     /**
      * Day constructor.
-     * @param int $number
+     * @param string $numberD
+     * @param $numberM
+     * @param $numberY
      */
-    public function __construct($number)
+    public function __construct($numberD, $numberM, $numberY)
     {
-        $this->number = $number;
+        if (strlen($numberD) == 1) {
+            $numberD = '0' . $numberD;
+        }
+
+        if (strlen($numberM) == 1) {
+            $numberM = '0' . $numberM;
+        }
+
+        $this->numberD = (string)$numberD;
+        $this->numberM = (string)$numberM;
+        $this->numberY = (string)$numberY;
+    }
+
+    /**
+     * @return string
+     */
+    public function getNumberD()
+    {
+        return $this->numberD;
+    }
+
+    /**
+     * @return string
+     */
+    public function getNumberM()
+    {
+        return $this->numberM;
     }
 
     /**
      * @return int
      */
-    public function getNumber()
+    public function getNumberY()
     {
-        return $this->number;
+        return $this->numberY;
     }
 
     /**
@@ -49,5 +100,14 @@ class Day
     public function setDescription($description)
     {
         $this->description = $description;
+    }
+
+    /**
+     * Получить объект DateTime
+     * @return \DateTime
+     */
+    public function getDateTime()
+    {
+        return new \DateTime("{$this->numberD}-{$this->numberM}-{$this->numberY}");
     }
 }
