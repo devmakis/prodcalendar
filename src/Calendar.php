@@ -163,6 +163,13 @@ class Calendar
          * @var \DateTime $dateD
          */
         $count = 0;
+        $begin->setTime(0, 0, 0);
+        $end->setTime(23, 59, 59);
+
+        if ($begin >= $end) {
+            throw new ClientException('Invalid time period');
+        }
+
         $monthBegin = $this->findMonth($begin);
         $monthEnd = $this->findMonth($end);
 
@@ -174,12 +181,20 @@ class Calendar
         foreach ($periodM as $dateM) {
             $month = $this->findMonth($dateM);
 
-            if ($month->getNumberM() == $monthBegin->getNumberM()) { // если первый месяц из периода
-                $endD = clone $dateM;
-                $endD = $endD->modify('last day of this month');;
+            if ($month->getNumberY() == $monthBegin->getNumberY() &&
+                $month->getNumberM() == $monthBegin->getNumberM()
+            ) { // если первый месяц из периода
+                $endD = null;
+
+                if ($monthBegin->getNumberY() != $monthEnd->getNumberY() ||
+                    $monthBegin->getNumberM() != $monthEnd->getNumberM()
+                ) {
+                    $endD = clone $dateM;
+                    $endD->modify('last day of this month')->setTime(23, 59, 59);
+                }
 
                 $intervalD = \DateInterval::createFromDateString('1 day');
-                $periodD = new \DatePeriod($begin, $intervalD, $endD);
+                $periodD = new \DatePeriod($begin, $intervalD, ($endD ? $endD : $end));
 
                 foreach ($periodD as $dateD) {
                     try {
@@ -188,9 +203,11 @@ class Calendar
                         $count++;
                     }
                 }
-            } elseif ($month->getNumberM() == $monthEnd->getNumberM()) { // если последний месяц из периода
+            } elseif ($month->getNumberY() == $monthEnd->getNumberY() &&
+                $month->getNumberM() == $monthEnd->getNumberM()
+            ) { // если последний месяц из периода
                 $beginD = clone $dateM;
-                $beginD = $beginD->modify('first day of this month');
+                $beginD->modify('first day of this month');
 
                 $intervalD = \DateInterval::createFromDateString('1 day');
                 $periodD = new \DatePeriod($beginD, $intervalD, $end);
@@ -225,6 +242,13 @@ class Calendar
          * @var \DateTime $dateD
          */
         $count = 0;
+        $begin->setTime(0, 0, 0);
+        $end->setTime(23, 59, 59);
+
+        if ($begin >= $end) {
+            throw new ClientException('Invalid time period');
+        }
+
         $monthBegin = $this->findMonth($begin);
         $monthEnd = $this->findMonth($end);
 
@@ -236,12 +260,20 @@ class Calendar
         foreach ($periodM as $dateM) {
             $month = $this->findMonth($dateM);
 
-            if ($month->getNumberM() == $monthBegin->getNumberM()) { // если первый месяц из периода
-                $endD = clone $dateM;
-                $endD = $endD->modify('last day of this month');;
+            if ($month->getNumberY() == $monthBegin->getNumberY() &&
+                $month->getNumberM() == $monthBegin->getNumberM()
+            ) { // если первый месяц из периода
+                $endD = null;
+
+                if ($monthBegin->getNumberY() != $monthEnd->getNumberY() ||
+                    $monthBegin->getNumberM() != $monthEnd->getNumberM()
+                ) {
+                    $endD = clone $dateM;
+                    $endD->modify('last day of this month')->setTime(23, 59, 59);
+                }
 
                 $intervalD = \DateInterval::createFromDateString('1 day');
-                $periodD = new \DatePeriod($begin, $intervalD, $endD);
+                $periodD = new \DatePeriod($begin, $intervalD, ($endD ? $endD : $end));
 
                 foreach ($periodD as $dateD) {
                     try {
@@ -251,9 +283,11 @@ class Calendar
                         continue;
                     }
                 }
-            } elseif ($month->getNumberM() == $monthEnd->getNumberM()) { // если последний месяц из периода
+            } elseif ($month->getNumberY() == $monthEnd->getNumberY() &&
+                $month->getNumberM() == $monthEnd->getNumberM()
+            ) { // если последний месяц из периода
                 $beginD = clone $dateM;
-                $beginD = $beginD->modify('first day of this month');
+                $beginD->modify('first day of this month');
 
                 $intervalD = \DateInterval::createFromDateString('1 day');
                 $periodD = new \DatePeriod($beginD, $intervalD, $end);

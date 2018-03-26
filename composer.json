@@ -3,6 +3,7 @@
   "type": "library",
   "description": "Библиотека для работы с производственным календарем. Реализовано получение данных от сервиса открытых данных России data.gov.ru",
   "homepage": "https://github.com/devmakis/prodcalendar.git",
+  "license": "MIT",
   "authors": [
     {
       "name": "Kiselev Maxim",

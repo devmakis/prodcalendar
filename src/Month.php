@@ -58,6 +58,14 @@ class Month
     }
 
     /**
+     * @return int
+     */
+    public function getNumberY()
+    {
+        return $this->numberY;
+    }
+
+    /**
      * @return Weekend[]
      */
     public function getNonWorkingDays()
