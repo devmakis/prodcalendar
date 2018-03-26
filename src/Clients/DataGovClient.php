@@ -26,18 +26,18 @@ class DataGovClient implements IClient
     const API_DATA_KEYS = [
         'YEAR'                  => 'Год/Месяц',
         'MONTHS'                => [
-            1  => 'Январь',
-            2  => 'Февраль',
-            3  => 'Март',
-            4  => 'Апрель',
-            5  => 'Май',
-            6  => 'Июнь',
-            7  => 'Июль',
-            8  => 'Август',
-            9  => 'Сентябрь',
-            10 => 'Октябрь',
-            11 => 'Ноябрь',
-            12 => 'Декабрь',
+            '01'  => 'Январь',
+            '02'  => 'Февраль',
+            '03'  => 'Март',
+            '04'  => 'Апрель',
+            '05'  => 'Май',
+            '06'  => 'Июнь',
+            '07'  => 'Июль',
+            '08'  => 'Август',
+            '09'  => 'Сентябрь',
+            '10' => 'Октябрь',
+            '11' => 'Ноябрь',
+            '12' => 'Декабрь',
         ],
         'TOTAL_WORKING_DAYS'    => 'Всего рабочих дней',
         'TOTAL_NONWORKING_DAYS' => 'Всего праздничных и выходных дней',
@@ -202,7 +202,7 @@ class DataGovClient implements IClient
                     if (strpos($numberD, DataGovClient::API_LABEL_PRE_HOLIDAY) !== false) {
                         $numberD = str_replace(DataGovClient::API_LABEL_PRE_HOLIDAY, '', $numberD);
                         $preHolidayDay = new PreHolidayDay($numberD, $numberM, $numberY);
-                        $preHolidayDays[$numberD] = $preHolidayDay;
+                        $preHolidayDays[$preHolidayDay->getNumberD()] = $preHolidayDay;
 
                         continue;
                     }
@@ -217,10 +217,11 @@ class DataGovClient implements IClient
                         $nonWorkingDay = new Weekend($numberD, $numberM, $numberY);
                     }
 
-                    $nonWorkingDays[(int)$numberD] = $nonWorkingDay;
+                    $nonWorkingDays[$nonWorkingDay->getNumberD()] = $nonWorkingDay;
                 }
 
-                $months[(int)$numberM] = new Month($numberM, $numberY, $nonWorkingDays, $preHolidayDays);
+                $month = new Month($numberM, $numberY, $nonWorkingDays, $preHolidayDays);
+                $months[$month->getNumberM()] = $month;
             }
 
             $calendar = new Year($numberY, $months);

@@ -13,6 +13,21 @@ use Devmakis\ProdCalendar\Clients\ClientException;
 class Calendar
 {
     /**
+     * Формат года
+     */
+    const FORMAT_YEAR = 'Y';
+
+    /**
+     * Формат месяца
+     */
+    const FORMAT_MONTH = 'm';
+
+    /**
+     * Формат дня
+     */
+    const FORMAT_DAY = 'd';
+
+    /**
      * @var DataGovClient
      */
     private $client;
@@ -57,8 +72,8 @@ class Calendar
      */
     public function findMonth(\DateTime $date)
     {
-        $y = $date->format('Y');
-        $m = $date->format('n');
+        $y = $date->format(self::FORMAT_YEAR);
+        $m = $date->format(self::FORMAT_MONTH);
         $month = $this->getYear($y)->getMonth($m);
 
         return $month;
@@ -74,7 +89,7 @@ class Calendar
     public function findDay(\DateTime $date)
     {
         $month = $this->findMonth($date);
-        $d = $date->format('j');
+        $d = $date->format(self::FORMAT_DAY);
 
         try {
             $day = $month->findNonWorkingDay($d);
@@ -144,8 +159,7 @@ class Calendar
     public function countWorkingDaysForPeriod(\DateTime $begin, \DateTime $end)
     {
         /**
-         * @var null|Month $prevMonth
-         * @var \DateTime $dateD
+         * @var \DateTime $dateM
          * @var \DateTime $dateD
          */
         $count = 0;
@@ -156,18 +170,12 @@ class Calendar
         $beginM->modify('first day of this month');
         $intervalM = \DateInterval::createFromDateString('1 month');
         $periodM = new \DatePeriod($beginM, $intervalM, $end);
-        $prevMonth = null;
 
-        foreach ($periodM as $date) {
-            /**
-             * @var \DateTime $date
-             */
-            $month = $this->findMonth($date);
+        foreach ($periodM as $dateM) {
+            $month = $this->findMonth($dateM);
 
-            if ($prevMonth && $month->getNumberM() == $prevMonth->getNumberM()) {
-                continue;
-            } elseif ($month->getNumberM() == $monthBegin->getNumberM()) {
-                $endD = clone $date;
+            if ($month->getNumberM() == $monthBegin->getNumberM()) { // если первый месяц из периода
+                $endD = clone $dateM;
                 $endD = $endD->modify('last day of this month');;
 
                 $intervalD = \DateInterval::createFromDateString('1 day');
@@ -175,13 +183,13 @@ class Calendar
 
                 foreach ($periodD as $dateD) {
                     try {
-                        $month->findNonWorkingDay((int)$dateD->format('j'));
+                        $month->findNonWorkingDay((int)$dateD->format(self::FORMAT_DAY));
                     } catch (CalendarException $e) {
                         $count++;
                     }
                 }
-            } elseif ($month->getNumberM() == $monthEnd->getNumberM()) {
-                $beginD = clone $date;
+            } elseif ($month->getNumberM() == $monthEnd->getNumberM()) { // если последний месяц из периода
+                $beginD = clone $dateM;
                 $beginD = $beginD->modify('first day of this month');
 
                 $intervalD = \DateInterval::createFromDateString('1 day');
@@ -189,16 +197,14 @@ class Calendar
 
                 foreach ($periodD as $dateD) {
                     try {
-                        $month->findNonWorkingDay((int)$dateD->format('j'));
+                        $month->findNonWorkingDay((int)$dateD->format(self::FORMAT_DAY));
                     } catch (CalendarException $e) {
                         $count++;
                     }
                 }
-            } else {
+            } else { // промежуточные месяцы
                 $count += $month->countWorkingDay();
             }
-
-            $prevMonth = $month;
         }
 
         return $count;
@@ -215,8 +221,7 @@ class Calendar
     public function countNonWorkingDaysForPeriod(\DateTime $begin, \DateTime $end)
     {
         /**
-         * @var null|Month $prevMonth
-         * @var \DateTime $dateD
+         * @var \DateTime $dateM
          * @var \DateTime $dateD
          */
         $count = 0;
@@ -227,18 +232,12 @@ class Calendar
         $beginM->modify('first day of this month');
         $intervalM = \DateInterval::createFromDateString('1 month');
         $periodM = new \DatePeriod($beginM, $intervalM, $end);
-        $prevMonth = null;
 
-        foreach ($periodM as $date) {
-            /**
-             * @var \DateTime $date
-             */
-            $month = $this->findMonth($date);
+        foreach ($periodM as $dateM) {
+            $month = $this->findMonth($dateM);
 
-            if ($prevMonth && $month->getNumberM() == $prevMonth->getNumberM()) {
-                continue;
-            } elseif ($month->getNumberM() == $monthBegin->getNumberM()) {
-                $endD = clone $date;
+            if ($month->getNumberM() == $monthBegin->getNumberM()) { // если первый месяц из периода
+                $endD = clone $dateM;
                 $endD = $endD->modify('last day of this month');;
 
                 $intervalD = \DateInterval::createFromDateString('1 day');
@@ -246,14 +245,14 @@ class Calendar
 
                 foreach ($periodD as $dateD) {
                     try {
-                        $month->findNonWorkingDay((int)$dateD->format('j'));
+                        $month->findNonWorkingDay((int)$dateD->format(self::FORMAT_DAY));
                         $count++;
                     } catch (CalendarException $e) {
                         continue;
                     }
                 }
-            } elseif ($month->getNumberM() == $monthEnd->getNumberM()) {
-                $beginD = clone $date;
+            } elseif ($month->getNumberM() == $monthEnd->getNumberM()) { // если последний месяц из периода
+                $beginD = clone $dateM;
                 $beginD = $beginD->modify('first day of this month');
 
                 $intervalD = \DateInterval::createFromDateString('1 day');
@@ -261,17 +260,15 @@ class Calendar
 
                 foreach ($periodD as $dateD) {
                     try {
-                        $month->findNonWorkingDay((int)$dateD->format('j'));
+                        $month->findNonWorkingDay((int)$dateD->format(self::FORMAT_DAY));
                         $count++;
                     } catch (CalendarException $e) {
                         continue;
                     }
                 }
-            } else {
+            } else { // промежуточные месяцы
                 $count += $month->countNonWorkingDay();
             }
-
-            $prevMonth = $month;
         }
 
         return $count;
