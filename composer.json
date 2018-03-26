@@ -3,7 +3,6 @@
   "type": "library",
   "description": "Library for work with the production calendar",
   "homepage": "https://github.com/devmakis/prodcalendar.git",
-  "license": "devmakis",
   "authors": [
     {
       "name": "Kiselev Maxim",
