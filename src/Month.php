@@ -109,7 +109,7 @@ class Month
      * Подсчитать количество нерабочих дней в месяце
      * @return int
      */
-    public function countNonWorkingDay()
+    public function countNonWorkingDays()
     {
         return count($this->nonWorkingDays);
     }
@@ -118,7 +118,7 @@ class Month
      * Подсчитать количество рабочих дней в месяце
      * @return int
      */
-    public function countWorkingDay()
+    public function countWorkingDays()
     {
         $countDays = (new \DateTime("01-{$this->numberM}-{$this->numberY}"))->format('t');
         return $countDays - count($this->nonWorkingDays);

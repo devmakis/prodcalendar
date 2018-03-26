@@ -156,12 +156,12 @@ class Year
      * Подсчитать количество нерабочих дней в году
      * @return int
      */
-    public function countNonWorkingDay()
+    public function countNonWorkingDays()
     {
         $count = 0;
 
         foreach ($this->months as $month) {
-            $count += $month->countNonWorkingDay();
+            $count += $month->countNonWorkingDays();
         }
 
         return $count;
@@ -171,12 +171,12 @@ class Year
      * Подсчитать количество рабочих дней в году
      * @return int
      */
-    public function countWorkingDay()
+    public function countWorkingDays()
     {
         $count = 0;
 
         foreach ($this->months as $month) {
-            $count += $month->countWorkingDay();
+            $count += $month->countWorkingDays();
         }
 
         return $count;

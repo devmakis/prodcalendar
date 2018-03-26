@@ -203,7 +203,7 @@ class Calendar
                     }
                 }
             } else { // промежуточные месяцы
-                $count += $month->countWorkingDay();
+                $count += $month->countWorkingDays();
             }
         }
 
@@ -267,7 +267,7 @@ class Calendar
                     }
                 }
             } else { // промежуточные месяцы
-                $count += $month->countNonWorkingDay();
+                $count += $month->countNonWorkingDays();
             }
         }
 
