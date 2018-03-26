@@ -1,7 +1,7 @@
 {
   "name": "devmakis/prodcalendar",
   "type": "library",
-  "description": "Library for work with the production calendar",
+  "description": "Библиотека для работы с производственным календарем. Реализовано получение данных от сервиса открытых данных России data.gov.ru",
   "homepage": "https://github.com/devmakis/prodcalendar.git",
   "authors": [
     {
