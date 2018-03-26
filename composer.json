@@ -3,6 +3,7 @@
   "type": "library",
   "description": "Library for work with the production calendar",
   "homepage": "https://github.com/devmakis/prodcalendar.git",
+  "license": "devmakis",
   "authors": [
     {
       "name": "Kiselev Maxim",
@@ -10,7 +11,7 @@
     }
   ],
   "require": {
-    "php": "^5.6 || ^7.0"
+    "php": ">=5.6"
   },
   "autoload": {
     "psr-4": {
