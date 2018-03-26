@@ -5,15 +5,16 @@
 
 namespace Devmakis\ProdCalendar\Clients;
 
+use Devmakis\ProdCalendar\Clients\Exceptions\ClientCacheFileException;
+use Devmakis\ProdCalendar\Clients\Exceptions\ClientException;
 use Devmakis\ProdCalendar\Day;
-use Devmakis\ProdCalendar\Exceptions\CalendarException;
 use Devmakis\ProdCalendar\Holiday;
 use Devmakis\ProdCalendar\Month;
 use Devmakis\ProdCalendar\PreHolidayDay;
 use Devmakis\ProdCalendar\Weekend;
 use Devmakis\ProdCalendar\Year;
 
-class DataGovClient implements IClient
+class DataGovClient implements IClient, IClientCacheFile
 {
     /**
      * Корневой адрес запроса к API сервиса
@@ -26,15 +27,15 @@ class DataGovClient implements IClient
     const API_DATA_KEYS = [
         'YEAR'                  => 'Год/Месяц',
         'MONTHS'                => [
-            '01'  => 'Январь',
-            '02'  => 'Февраль',
-            '03'  => 'Март',
-            '04'  => 'Апрель',
-            '05'  => 'Май',
-            '06'  => 'Июнь',
-            '07'  => 'Июль',
-            '08'  => 'Август',
-            '09'  => 'Сентябрь',
+            '01' => 'Январь',
+            '02' => 'Февраль',
+            '03' => 'Март',
+            '04' => 'Апрель',
+            '05' => 'Май',
+            '06' => 'Июнь',
+            '07' => 'Июль',
+            '08' => 'Август',
+            '09' => 'Сентябрь',
             '10' => 'Октябрь',
             '11' => 'Ноябрь',
             '12' => 'Декабрь',
@@ -99,11 +100,16 @@ class DataGovClient implements IClient
     protected $connectTimeout;
 
     /**
-     * Данные ответа от API сервиса
+     * Данные от API сервиса
+     * @var array
+     */
+    protected $data;
+
+    /**
+     * Путь к файлу, в котором сохраненны данные от API сервиса
      * @var string
      */
-    protected $response;
-
+    protected $cacheFile;
 
     /**
      * Client constructor.
@@ -134,14 +140,30 @@ class DataGovClient implements IClient
     }
 
     /**
+     * @return string
+     */
+    public function getCacheFile()
+    {
+        return $this->cacheFile;
+    }
+
+    /**
+     * @param string $cacheFile
+     */
+    public function setCacheFile($cacheFile)
+    {
+        $this->cacheFile = $cacheFile;
+    }
+
+    /**
      * Запросит данные у API сервиса
      * @throws ClientException
-     * return array $response
+     * @return array $response
      */
     public function request()
     {
-        if ($this->response) {
-            return $this->response;
+        if ($this->data) {
+            return $this->data;
         }
 
         $curl = curl_init($this->requestUrl);
@@ -168,21 +190,24 @@ class DataGovClient implements IClient
             throw new ClientException('Response is empty or incorrect');
         }
 
-        $this->response = $response;
-
-        return $this->response;
+        $this->data = $response;
+        return $this->data;
     }
 
     /**
      * @param $numberY
      * @return Year
-     * @throws CalendarException
      * @throws ClientException
      */
     public function getYear($numberY)
     {
         $numberY = (string)$numberY;
-        $response = $this->request();
+
+        try {
+            $response = $this->readFromFile();
+        } catch (ClientCacheFileException $e) {
+            $response = $this->request();
+        }
 
         foreach ($response as $row) {
             $responseYear = (string)$row[DataGovClient::API_DATA_KEYS['YEAR']];
@@ -232,6 +257,54 @@ class DataGovClient implements IClient
             return $calendar;
         }
 
-        throw new CalendarException("Production calendar is not found for «{$numberY}» year");
+        throw new ClientException("Production calendar is not found for «{$numberY}» year");
+    }
+
+    /**
+     * Сохранить данные в файл
+     * @param array $data записываемые данные
+     * @return bool
+     * @throws ClientCacheFileException
+     */
+    public function cacheToFile($data)
+    {
+        if (!$this->getCacheFile()) {
+            throw new ClientCacheFileException('The path to the cached file is not set');
+        }
+
+        $contents = file_put_contents($this->getCacheFile(), json_encode($data));
+
+        if ($contents === false) {
+            $error = error_get_last();
+            throw new ClientCacheFileException($error['message']);
+        } elseif ($contents === 0) {
+            throw new ClientCacheFileException('file_put_contents: number of bytes written to the file = 0');
+        }
+
+        return true;
+    }
+
+    /**
+     * Прочитать данные из файла
+     * @return string
+     * @throws ClientCacheFileException
+     */
+    public function readFromFile()
+    {
+        if (!$this->getCacheFile()) {
+            throw new ClientCacheFileException('The path to the cached file is not set');
+        } elseif (!file_exists($this->getCacheFile())) {
+            throw new ClientCacheFileException('The file does not exist');
+        }
+
+        $result = file_get_contents($this->getCacheFile());
+
+        if ($result === false) {
+            $error = error_get_last();
+            throw new ClientCacheFileException($error['message']);
+        }
+
+        $this->data = json_decode($result, true);
+        return $this->data;
     }
 }

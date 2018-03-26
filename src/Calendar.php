@@ -2,9 +2,10 @@
 
 namespace Devmakis\ProdCalendar;
 
+use Devmakis\ProdCalendar\Clients\Exceptions\ClientException;
 use Devmakis\ProdCalendar\Clients\DataGovClient;
+use Devmakis\ProdCalendar\Clients\IClient;
 use Devmakis\ProdCalendar\Exceptions\CalendarException;
-use Devmakis\ProdCalendar\Clients\ClientException;
 
 /**
  * Class Calendar производственный календарь
@@ -39,9 +40,9 @@ class Calendar
 
     /**
      * Calendar constructor.
-     * @param DataGovClient $client
+     * @param IClient $client
      */
-    public function __construct(DataGovClient $client)
+    public function __construct(IClient $client)
     {
         $this->client = $client;
     }
@@ -49,7 +50,6 @@ class Calendar
     /**
      * @param $numberY
      * @return Year
-     * @throws CalendarException
      * @throws ClientException
      */
     public function getYear($numberY)
@@ -183,7 +183,7 @@ class Calendar
 
                 foreach ($periodD as $dateD) {
                     try {
-                        $month->findNonWorkingDay((int)$dateD->format(self::FORMAT_DAY));
+                        $month->findNonWorkingDay($dateD->format(self::FORMAT_DAY));
                     } catch (CalendarException $e) {
                         $count++;
                     }
@@ -197,7 +197,7 @@ class Calendar
 
                 foreach ($periodD as $dateD) {
                     try {
-                        $month->findNonWorkingDay((int)$dateD->format(self::FORMAT_DAY));
+                        $month->findNonWorkingDay($dateD->format(self::FORMAT_DAY));
                     } catch (CalendarException $e) {
                         $count++;
                     }
@@ -245,7 +245,7 @@ class Calendar
 
                 foreach ($periodD as $dateD) {
                     try {
-                        $month->findNonWorkingDay((int)$dateD->format(self::FORMAT_DAY));
+                        $month->findNonWorkingDay($dateD->format(self::FORMAT_DAY));
                         $count++;
                     } catch (CalendarException $e) {
                         continue;
@@ -260,7 +260,7 @@ class Calendar
 
                 foreach ($periodD as $dateD) {
                     try {
-                        $month->findNonWorkingDay((int)$dateD->format(self::FORMAT_DAY));
+                        $month->findNonWorkingDay($dateD->format(self::FORMAT_DAY));
                         $count++;
                     } catch (CalendarException $e) {
                         continue;

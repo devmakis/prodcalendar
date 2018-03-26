@@ -2,6 +2,7 @@
 
 namespace Devmakis\ProdCalendar\Clients;
 
+use Devmakis\ProdCalendar\Clients\Exceptions\ClientException;
 use Devmakis\ProdCalendar\Year;
 
 /**
@@ -11,9 +12,17 @@ use Devmakis\ProdCalendar\Year;
 interface IClient
 {
     /**
+     * Запросит данные у API сервиса
+     * @return mixed
+     * @throws ClientException
+     */
+    public function request();
+
+    /**
      * Получить произвоственный календарь за определенный год
      * @param string $numberY номер года
      * @return Year
+     * @throws ClientException
      */
     public function getYear($numberY);
 }
