@@ -9,7 +9,7 @@
 
 `composer require devmakis/prodcalendar`
 
-## Пример использования
+## Примеры использования
 
 ```php
 use Devmakis\ProdCalendar\Clients\DataGovClient;
