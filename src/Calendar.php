@@ -150,21 +150,25 @@ class Calendar
 
     /**
      * Подсчитать количество рабочих дней за период
-     * @param \DateTime $begin
-     * @param \DateTime $end
-     * @return int
+     * @param \DateTime $begin начальная дата периода
+     * @param \DateTime $end конечная дата периода
+     * @param bool $excludeBegin не учитывать начальную дату
+     * @param bool $excludeEnd не учитывать конечную дату
+     * @return int количество рабочих дней за период
      * @throws CalendarException
      * @throws ClientException
      */
-    public function countWorkingDaysForPeriod(\DateTime $begin, \DateTime $end)
+    public function countWorkingDaysForPeriod(\DateTime $begin, \DateTime $end, $excludeBegin = false, $excludeEnd = false)
     {
         /**
          * @var \DateTime $dateM
          * @var \DateTime $dateD
          */
         $count = 0;
+        $begin = clone $begin;
         $begin->setTime(0, 0, 0);
-        $end->setTime(23, 59, 59);
+        $end = clone $end;
+        $excludeEnd ? $end->setTime(0, 0, 0) : $end->setTime(23, 59, 59);
 
         if ($begin >= $end) {
             throw new ClientException('Invalid time period');
@@ -174,6 +178,7 @@ class Calendar
         $monthEnd = $this->findMonth($end);
 
         $beginM = clone $begin;
+        // Начало периода сбрасываем на начало месяца чтобы интервал в 1 месяц не пропустил какой-либо месяц
         $beginM->modify('first day of this month');
         $intervalM = \DateInterval::createFromDateString('1 month');
         $periodM = new \DatePeriod($beginM, $intervalM, $end);
@@ -181,20 +186,23 @@ class Calendar
         foreach ($periodM as $dateM) {
             $month = $this->findMonth($dateM);
 
+            // Если первый месяц из периода
             if ($month->getNumberY() == $monthBegin->getNumberY() &&
                 $month->getNumberM() == $monthBegin->getNumberM()
-            ) { // если первый месяц из периода
-                $endD = null;
-
-                if ($monthBegin->getNumberY() != $monthEnd->getNumberY() ||
-                    $monthBegin->getNumberM() != $monthEnd->getNumberM()
+            ) {
+                // Если начало и конец периода это день из одного и того же месяца и года
+                if ($monthBegin->getNumberY() == $monthEnd->getNumberY() &&
+                    $monthBegin->getNumberM() == $monthEnd->getNumberM()
                 ) {
+                    $endD = $end;
+                } else {
                     $endD = clone $dateM;
+                    // Устанавливаем конец периода последним днем месяца
                     $endD->modify('last day of this month')->setTime(23, 59, 59);
                 }
 
                 $intervalD = \DateInterval::createFromDateString('1 day');
-                $periodD = new \DatePeriod($begin, $intervalD, ($endD ? $endD : $end));
+                $periodD = new \DatePeriod($begin, $intervalD, $endD, (int)$excludeBegin);
 
                 foreach ($periodD as $dateD) {
                     try {
@@ -203,10 +211,12 @@ class Calendar
                         $count++;
                     }
                 }
+            // Если последний месяц из периода
             } elseif ($month->getNumberY() == $monthEnd->getNumberY() &&
                 $month->getNumberM() == $monthEnd->getNumberM()
-            ) { // если последний месяц из периода
+            ) {
                 $beginD = clone $dateM;
+                // Т.к. это последний месяц периода, то отсчет начинаем с первого дня месяца
                 $beginD->modify('first day of this month');
 
                 $intervalD = \DateInterval::createFromDateString('1 day');
@@ -219,7 +229,8 @@ class Calendar
                         $count++;
                     }
                 }
-            } else { // промежуточные месяцы
+            // Промежуточные месяцы (полные)
+            } else {
                 $count += $month->countWorkingDays();
             }
         }
@@ -229,21 +240,25 @@ class Calendar
 
     /**
      * Подсчитать количество нерабочих дней за период
-     * @param \DateTime $begin
-     * @param \DateTime $end
-     * @return int
+     * @param \DateTime $begin начальная дата периода
+     * @param \DateTime $end конечная дата периода
+     * @param bool $excludeBegin не учитывать начальную дату
+     * @param bool $excludeEnd не учитывать конечную дату
+     * @return int количество рабочих дней за период
      * @throws CalendarException
      * @throws ClientException
      */
-    public function countNonWorkingDaysForPeriod(\DateTime $begin, \DateTime $end)
+    public function countNonWorkingDaysForPeriod(\DateTime $begin, \DateTime $end, $excludeBegin = false, $excludeEnd = false)
     {
         /**
          * @var \DateTime $dateM
          * @var \DateTime $dateD
          */
         $count = 0;
+        $begin = clone $begin;
         $begin->setTime(0, 0, 0);
-        $end->setTime(23, 59, 59);
+        $end = clone $end;
+        $excludeEnd ? $end->setTime(0, 0, 0) : $end->setTime(23, 59, 59);
 
         if ($begin >= $end) {
             throw new ClientException('Invalid time period');
@@ -253,6 +268,7 @@ class Calendar
         $monthEnd = $this->findMonth($end);
 
         $beginM = clone $begin;
+        // Начало периода сбрасываем на начало месяца чтобы интервал в 1 месяц не пропустил какой-либо месяц
         $beginM->modify('first day of this month');
         $intervalM = \DateInterval::createFromDateString('1 month');
         $periodM = new \DatePeriod($beginM, $intervalM, $end);
@@ -260,20 +276,23 @@ class Calendar
         foreach ($periodM as $dateM) {
             $month = $this->findMonth($dateM);
 
+            // Если первый месяц из периода
             if ($month->getNumberY() == $monthBegin->getNumberY() &&
                 $month->getNumberM() == $monthBegin->getNumberM()
-            ) { // если первый месяц из периода
-                $endD = null;
-
-                if ($monthBegin->getNumberY() != $monthEnd->getNumberY() ||
-                    $monthBegin->getNumberM() != $monthEnd->getNumberM()
+            ) {
+                // Если начало и конец периода это день из одного и того же месяца и года
+                if ($monthBegin->getNumberY() == $monthEnd->getNumberY() &&
+                    $monthBegin->getNumberM() == $monthEnd->getNumberM()
                 ) {
+                    $endD = $end;
+                } else {
                     $endD = clone $dateM;
+                    // Устанавливаем конец периода последним днем месяца
                     $endD->modify('last day of this month')->setTime(23, 59, 59);
                 }
 
                 $intervalD = \DateInterval::createFromDateString('1 day');
-                $periodD = new \DatePeriod($begin, $intervalD, ($endD ? $endD : $end));
+                $periodD = new \DatePeriod($begin, $intervalD, $endD, (int)$excludeBegin);
 
                 foreach ($periodD as $dateD) {
                     try {
@@ -283,10 +302,12 @@ class Calendar
                         continue;
                     }
                 }
+            // Если последний месяц из периода
             } elseif ($month->getNumberY() == $monthEnd->getNumberY() &&
                 $month->getNumberM() == $monthEnd->getNumberM()
-            ) { // если последний месяц из периода
+            ) {
                 $beginD = clone $dateM;
+                // Т.к. это последний месяц периода, то отсчет начинаем с первого дня месяца
                 $beginD->modify('first day of this month');
 
                 $intervalD = \DateInterval::createFromDateString('1 day');
@@ -300,7 +321,8 @@ class Calendar
                         continue;
                     }
                 }
-            } else { // промежуточные месяцы
+            // Промежуточные месяцы (полные)
+            } else {
                 $count += $month->countNonWorkingDays();
             }
         }
