@@ -233,6 +233,7 @@ class DataGovClient implements IClient, ICachedClient
     }
 
     /**
+     * Получить год производственного календаря
      * @param $numberY
      * @return Year
      * @throws ClientException
