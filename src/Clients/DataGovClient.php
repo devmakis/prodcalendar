@@ -112,6 +112,12 @@ class DataGovClient implements IClient, ICachedClient
     protected $cacheFile;
 
     /**
+     * Время жизни кэша в секундах (по умолчанию 15 суток)
+     * @var int
+     */
+    protected $cacheLifetime = 60 * 60 * 24 * 15;
+
+    /**
      * Client constructor.
      * @param string $token
      */
@@ -156,6 +162,22 @@ class DataGovClient implements IClient, ICachedClient
     }
 
     /**
+     * @return int
+     */
+    public function getCacheLifetime()
+    {
+        return $this->cacheLifetime;
+    }
+
+    /**
+     * @param int $cacheLifetime
+     */
+    public function setCacheLifetime($cacheLifetime)
+    {
+        $this->cacheLifetime = (int)$cacheLifetime;
+    }
+
+    /**
      * Запросит данные у API сервиса
      * @throws ClientException
      * @return string $response
@@ -197,7 +219,7 @@ class DataGovClient implements IClient, ICachedClient
 
         try {
             $result = $this->readCache();
-        } catch (ClientCacheException $e) {
+        } catch (ClientException $e) {
             $result = $this->request();
         }
 
@@ -295,13 +317,22 @@ class DataGovClient implements IClient, ICachedClient
      * Прочитать из кэша (из файла)
      * @return string
      * @throws ClientCacheException
+     * @throws ClientException
      */
     public function readCache()
     {
         if (!$this->getCacheFile()) {
             throw new ClientCacheException('The path to the cached file is not set');
-        } elseif (!file_exists($this->getCacheFile())) {
-            throw new ClientCacheException('The file does not exist');
+        }
+
+        if (!file_exists($this->getCacheFile())) {
+            $this->writeCache();
+        } else {
+            $timeLastUpdateFile = filemtime($this->getCacheFile());
+
+            if ($timeLastUpdateFile < time() - $this->cacheLifetime) {
+                $this->writeCache();
+            }
         }
 
         $result = file_get_contents($this->getCacheFile());
