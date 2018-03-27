@@ -5,6 +5,6 @@
 
 namespace Devmakis\ProdCalendar\Clients\Exceptions;
 
-class ClientCacheFileException extends ClientException
+class ClientCacheException extends ClientException
 {
 }

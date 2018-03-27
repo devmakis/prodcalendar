@@ -12,11 +12,11 @@ use Devmakis\ProdCalendar\Year;
 interface IClient
 {
     /**
-     * Запросит данные у API сервиса
+     * Получить данные от клиента
      * @return mixed
      * @throws ClientException
      */
-    public function request();
+    public function getData();
 
     /**
      * Получить произвоственный календарь за определенный год
