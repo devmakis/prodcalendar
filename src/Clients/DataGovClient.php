@@ -245,7 +245,7 @@ class DataGovClient implements IClient, ICachedClient
                     $nonWorkingDay = new Day($numberD, $numberM, $numberY);
                     $keyHoliday = $nonWorkingDay->getNumberD() . '.' . $nonWorkingDay->getNumberM();
 
-                    if (isset(self::NONWORKING_HOLIDAYS[$keyHoliday])) {
+                    if (array_key_exists($keyHoliday, self::NONWORKING_HOLIDAYS[$keyHoliday])) {
                         $nonWorkingDay = new Holiday($numberD, $numberM, $numberY);
                         $nonWorkingDay->setDescription(self::NONWORKING_HOLIDAYS[$keyHoliday]);
                     } else {
