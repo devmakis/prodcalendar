@@ -36,8 +36,10 @@ $calendar->isPreHoliday(new DateTime('22-02-2018'));
 Получаем количество рабочих | нерабочих дней за определенный период
 
 ```php
-$countWorkingDays = $calendar->countWorkingDaysForPeriod(new DateTime('31-01-2018'), new DateTime('08-05-2018'));
-$countNonWorkingDays = $calendar->countNonWorkingDaysForPeriod(new DateTime('31-01-2018'), new DateTime('08-05-2018'));
+$dateBegin = new DateTime('31-01-2018');
+$dateEnd = new DateTime('08-05-2018');
+$countWorkingDays = $calendar->countWorkingDaysForPeriod($dateBegin, $dateEnd);
+$countNonWorkingDays = $calendar->countNonWorkingDaysForPeriod($dateBegin, $dateEnd);
 ```
 
 Получаем производственный календарь за определенный год, узнаем количество рабочих | нерабочих дней в году, в месяце
