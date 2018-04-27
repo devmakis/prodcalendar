@@ -6,6 +6,7 @@
 namespace Devmakis\ProdCalendar\Clients;
 
 use Devmakis\ProdCalendar\Clients\Exceptions\ClientCacheException;
+use Devmakis\ProdCalendar\Clients\Exceptions\ClientCurlException;
 use Devmakis\ProdCalendar\Clients\Exceptions\ClientException;
 use Devmakis\ProdCalendar\Day;
 use Devmakis\ProdCalendar\Holiday;
@@ -179,7 +180,7 @@ class DataGovClient implements IClient, ICachedClient
 
     /**
      * Запросит данные у API сервиса
-     * @throws ClientException
+     * @throws ClientCurlException
      * @return string $response
      */
     public function request()
@@ -198,7 +199,7 @@ class DataGovClient implements IClient, ICachedClient
             $errorMessage = curl_error($curl);
             curl_close($curl);
 
-            throw new ClientException('cURL request get error - ' . $errorMessage, $errorCode);
+            throw new ClientCurlException('cURL request get error - ' . $errorMessage, $errorCode);
         }
 
         curl_close($curl);
@@ -209,6 +210,7 @@ class DataGovClient implements IClient, ICachedClient
     /**
      * Получить данные от API сервиса
      * @return array
+     * @throws ClientCurlException
      * @throws ClientException
      */
     public function getData()
@@ -296,7 +298,7 @@ class DataGovClient implements IClient, ICachedClient
     /**
      * Записать в кэш (в файл)
      * @throws ClientCacheException
-     * @throws ClientException
+     * @throws ClientCurlException
      */
     public function writeCache()
     {
@@ -318,7 +320,7 @@ class DataGovClient implements IClient, ICachedClient
      * Прочитать из кэша (из файла)
      * @return string
      * @throws ClientCacheException
-     * @throws ClientException
+     * @throws ClientCurlException
      */
     public function readCache()
     {
@@ -332,7 +334,13 @@ class DataGovClient implements IClient, ICachedClient
             $timeLastUpdateFile = filemtime($this->getCacheFile());
 
             if ($timeLastUpdateFile < time() - $this->cacheLifetime) {
-                $this->writeCache();
+                try {
+                    $this->writeCache();
+                } catch (ClientCurlException $e) {
+                    // Когда кэш есть и он просто просрочен,
+                    // если от сервера приходит ошибка, то используем существующий кэш
+                    // поэтому отлавливаем здесь это исключение
+                }
             }
         }
 
