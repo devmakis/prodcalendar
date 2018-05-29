@@ -80,7 +80,7 @@ class Calendar
     }
 
     /**
-     * Найти день из производственного календаря
+     * Найти день из производственного календаря (нерабочий или предпраздничный)
      * @param \DateTime $date
      * @return Day|null
      * @throws CalendarException
@@ -104,48 +104,62 @@ class Calendar
      * Проверить является ли день праздничным
      * @param \DateTime $date
      * @return bool
-     * @throws CalendarException
      * @throws ClientException
      */
     public function isHoliday(\DateTime $date)
     {
-        return $this->findDay($date) instanceof Holiday;
+        try {
+            return $this->findDay($date) instanceof Holiday;
+        } catch (CalendarException $e) {
+            return false;
+        }
     }
 
     /**
      * Проверить является ли день предпраздничным
      * @param \DateTime $date
      * @return bool
-     * @throws CalendarException
      * @throws ClientException
      */
     public function isPreHoliday(\DateTime $date)
     {
-        return $this->findDay($date) instanceof PreHolidayDay;
+        try {
+            return $this->findDay($date) instanceof PreHolidayDay;
+        } catch (CalendarException $e) {
+            return false;
+        }
     }
 
     /**
      * Проверить является ли день выходным
      * @param \DateTime $date
      * @return bool
-     * @throws CalendarException
      * @throws ClientException
      */
     public function isWeekend(\DateTime $date)
     {
-        return $this->findDay($date) instanceof Weekend;
+        try {
+            return $this->findDay($date) instanceof Weekend;
+        } catch (CalendarException $e) {
+            return false;
+        }
     }
 
     /**
      * Проверить является ли день нерабочим
      * @param \DateTime $date
      * @return bool
-     * @throws CalendarException
      * @throws ClientException
      */
     public function isNonWorking(\DateTime $date)
     {
-        return $this->isWeekend($date) || $this->isHoliday($date);
+        if ($this->isWeekend($date)) {
+            return true;
+        } elseif ($this->isHoliday($date)) {
+            return true;
+        } else {
+            return false;
+        }
     }
 
     /**
