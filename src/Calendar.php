@@ -343,4 +343,24 @@ class Calendar
 
         return $count;
     }
+
+    /**
+     * Функция ищет ближайшую рабочую дату (включая сегодняшнюю)
+     * @param \DateTime|null $date
+     * @return \DateTime
+     * @throws ClientException
+     */
+    public function nearestWorkingDate(\DateTime $date = null)
+    {
+        if ($date === null) {
+            $date = (new \DateTime());
+        }
+
+        while ($this->isNonWorking($date)) {
+            $interval = \DateInterval::createfromdatestring('+1 day');
+            $date->add($interval);
+        }
+
+        return $date;
+    }
 }
