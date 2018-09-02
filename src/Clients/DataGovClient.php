@@ -7,6 +7,7 @@ namespace Devmakis\ProdCalendar\Clients;
 
 use Devmakis\ProdCalendar\Clients\Exceptions\ClientCacheException;
 use Devmakis\ProdCalendar\Clients\Exceptions\ClientCurlException;
+use Devmakis\ProdCalendar\Clients\Exceptions\ClientEmptyResponseException;
 use Devmakis\ProdCalendar\Clients\Exceptions\ClientException;
 use Devmakis\ProdCalendar\Day;
 use Devmakis\ProdCalendar\Holiday;
@@ -116,7 +117,7 @@ class DataGovClient implements IClient, ICachedClient
      * Время жизни кэша в секундах (по умолчанию 15 суток)
      * @var int
      */
-    protected $cacheLifetime = 60 * 60 * 24 * 15;
+    protected $cacheLifetime = 60 * 60 * 24 * 0;
 
     /**
      * Client constructor.
@@ -299,6 +300,7 @@ class DataGovClient implements IClient, ICachedClient
      * Записать в кэш (в файл)
      * @throws ClientCacheException
      * @throws ClientCurlException
+     * @throws ClientEmptyResponseException
      */
     public function writeCache()
     {
@@ -306,7 +308,14 @@ class DataGovClient implements IClient, ICachedClient
             throw new ClientCacheException('The path to the cached file is not set');
         }
 
-        $contents = file_put_contents($this->getCacheFile(), $this->request());
+        $result = $this->request();
+        $arrResult = json_decode($result, true);
+
+        if (empty($arrResult)) {
+            throw new ClientEmptyResponseException('Empty response');
+        }
+
+        $contents = file_put_contents($this->getCacheFile(), $result);
 
         if ($contents === false) {
             $error = error_get_last();
@@ -321,6 +330,7 @@ class DataGovClient implements IClient, ICachedClient
      * @return string
      * @throws ClientCacheException
      * @throws ClientCurlException
+     * @throws ClientEmptyResponseException
      */
     public function readCache()
     {
@@ -336,10 +346,11 @@ class DataGovClient implements IClient, ICachedClient
             if ($timeLastUpdateFile < time() - $this->cacheLifetime) {
                 try {
                     $this->writeCache();
-                } catch (ClientCurlException $e) {
                     // Когда кэш есть и он просто просрочен,
-                    // если от сервера приходит ошибка, то используем существующий кэш
-                    // поэтому отлавливаем здесь это исключение
+                    // если от сервера приходит ошибка или пустой ответ, то используем существующий кэш
+                    // поэтому отлавливаем здесь эти исключения
+                } catch (ClientCurlException $e) {
+                } catch (ClientEmptyResponseException $e) {
                 }
             }
         }
