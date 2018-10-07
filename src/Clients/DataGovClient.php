@@ -117,7 +117,7 @@ class DataGovClient implements IClient, ICachedClient
      * Время жизни кэша в секундах (по умолчанию 15 суток)
      * @var int
      */
-    protected $cacheLifetime = 60 * 60 * 24 * 0;
+    protected $cacheLifetime = 60 * 60 * 24 * 15;
 
     /**
      * Client constructor.
