@@ -19,12 +19,13 @@ $client = new DataGovClient('YOUR_TOKEN');
 $calendar = new Calendar($client);
 ```
 
-Проверяем является ли день нерабочим (выходным | праздничным)
+Проверяем является ли день нерабочим (выходным | праздничным | перенесенным праздником)
 
 ```php
 $calendar->isNonWorking(new DateTime('01-01-2018'));
 $calendar->isWeekend(new DateTime('01-01-2018'));
 $calendar->isHoliday(new DateTime('01-01-2018'));
+$calendar->isTransferredHoliday(new DateTime('24-03-2020'));
 ```
 
 Проверяем является ли день предпраздничным
