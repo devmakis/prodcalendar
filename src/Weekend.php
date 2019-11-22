@@ -2,29 +2,25 @@
 
 namespace Devmakis\ProdCalendar;
 
+use Exception;
+
 /**
- * Class Weekend выходной день
+ * Class Weekend обычный выходной день (сб, вск)
  * @package Devmakis\ProdCalendar
  */
-class Weekend extends Day
+class Weekend extends Day implements NonWorkingDay
 {
     /**
      * Weekend constructor.
      * @param $numberD
      * @param $numberM
      * @param $numberY
+     * @throws Exception
      */
     public function __construct($numberD, $numberM, $numberY)
     {
         parent::__construct($numberD, $numberM, $numberY);
-        $this->description = 'Выходной день';
-
         $nDayWeek = $this->getDateTime()->format('N');
-
-        if ($nDayWeek == 6 || $nDayWeek == 7) {
-            $this->description .= ' (' . self::NAME_DAYS_RU[$nDayWeek] . ')';
-        } else {
-            $this->description .= ' (переносенный)';
-        }
+        $this->description = 'Выходной день (' . self::NAME_DAYS_RU[$nDayWeek] . ')';
     }
 }

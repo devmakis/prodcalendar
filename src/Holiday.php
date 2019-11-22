@@ -6,6 +6,6 @@ namespace Devmakis\ProdCalendar;
  * Class Holiday - нерабочий праздничный день
  * @package Devmakis\ProdCalendar
  */
-class Holiday extends Day
+class Holiday extends Day implements NonWorkingDay
 {
 }

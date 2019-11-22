@@ -13,6 +13,7 @@ use Devmakis\ProdCalendar\Day;
 use Devmakis\ProdCalendar\Holiday;
 use Devmakis\ProdCalendar\Month;
 use Devmakis\ProdCalendar\PreHolidayDay;
+use Devmakis\ProdCalendar\TransferredHoliday;
 use Devmakis\ProdCalendar\Weekend;
 use Devmakis\ProdCalendar\Year;
 
@@ -58,6 +59,11 @@ class DataGovClient implements IClient, ICachedClient
      * Метка предпраздничного дня в данных API сервиса
      */
     const API_LABEL_PRE_HOLIDAY = '*';
+
+    /**
+     * Метка перенесенного праздника в данных API сервиса
+     */
+    const API_LABEL_TRANSFERRED_HOLIDAY = '+';
 
     /**
      * Нерабочие праздничные дни
@@ -260,6 +266,7 @@ class DataGovClient implements IClient, ICachedClient
                 $preHolidayDays = [];
 
                 foreach ($days as $numberD) {
+                    // Определение предпраздничного дня по метке от АПИ
                     if (strpos($numberD, DataGovClient::API_LABEL_PRE_HOLIDAY) !== false) {
                         $numberD = str_replace(DataGovClient::API_LABEL_PRE_HOLIDAY, '', $numberD);
                         $preHolidayDay = new PreHolidayDay($numberD, $numberM, $numberY);
@@ -268,16 +275,39 @@ class DataGovClient implements IClient, ICachedClient
                         continue;
                     }
 
+                    // Определение перенесенного праздника по метке от АПИ
+                    if (strpos($numberD, DataGovClient::API_LABEL_TRANSFERRED_HOLIDAY) !== false) {
+                        $numberD = str_replace(DataGovClient::API_LABEL_TRANSFERRED_HOLIDAY, '', $numberD);
+                        $nonWorkingDay = new TransferredHoliday($numberD, $numberM, $numberY);
+                        $nonWorkingDays[$nonWorkingDay->getNumberD()] = $nonWorkingDay;
+
+                        continue;
+                    }
+
+                    // Определение праздничного
                     $nonWorkingDay = new Day($numberD, $numberM, $numberY);
                     $keyHoliday = $nonWorkingDay->getNumberD() . '.' . $nonWorkingDay->getNumberM();
 
                     if (array_key_exists($keyHoliday, self::NONWORKING_HOLIDAYS)) {
                         $nonWorkingDay = new Holiday($numberD, $numberM, $numberY);
                         $nonWorkingDay->setDescription(self::NONWORKING_HOLIDAYS[$keyHoliday]);
-                    } else {
-                        $nonWorkingDay = new Weekend($numberD, $numberM, $numberY);
+                        $nonWorkingDays[$nonWorkingDay->getNumberD()] = $nonWorkingDay;
+
+                        continue;
                     }
 
+                    // Определение перенесенного праздника, если нет меки от АПИ (это не сб и не вск)
+                    $nDayWeek = $nonWorkingDay->getDateTime()->format('N');
+
+                    if (!in_array($nDayWeek, [6, 7])) {
+                        $nonWorkingDay = new TransferredHoliday($numberD, $numberM, $numberY);
+                        $nonWorkingDays[$nonWorkingDay->getNumberD()] = $nonWorkingDay;
+
+                        continue;
+                    }
+
+                    // Если не все что выше, значит это обычный выходной день
+                    $nonWorkingDay = new Weekend($numberD, $numberM, $numberY);
                     $nonWorkingDays[$nonWorkingDay->getNumberD()] = $nonWorkingDay;
                 }
 

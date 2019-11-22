@@ -2,6 +2,9 @@
 
 namespace Devmakis\ProdCalendar;
 
+use DateInterval;
+use DatePeriod;
+use DateTime;
 use Devmakis\ProdCalendar\Clients\Exceptions\ClientException;
 use Devmakis\ProdCalendar\Clients\DataGovClient;
 use Devmakis\ProdCalendar\Clients\IClient;
@@ -65,12 +68,12 @@ class Calendar
 
     /**
      * Найти месяц из производственного календаря
-     * @param \DateTime $date
+     * @param DateTime $date
      * @return Month
      * @throws CalendarException
      * @throws ClientException
      */
-    public function findMonth(\DateTime $date)
+    public function findMonth(DateTime $date)
     {
         $y = $date->format(self::FORMAT_YEAR);
         $m = $date->format(self::FORMAT_MONTH);
@@ -81,12 +84,12 @@ class Calendar
 
     /**
      * Найти день из производственного календаря (нерабочий или предпраздничный)
-     * @param \DateTime $date
+     * @param DateTime $date
      * @return Day|null
      * @throws CalendarException
      * @throws ClientException
      */
-    public function findDay(\DateTime $date)
+    public function findDay(DateTime $date)
     {
         $month = $this->findMonth($date);
         $d = $date->format(self::FORMAT_DAY);
@@ -102,11 +105,11 @@ class Calendar
 
     /**
      * Проверить является ли день праздничным
-     * @param \DateTime $date
+     * @param DateTime $date
      * @return bool
      * @throws ClientException
      */
-    public function isHoliday(\DateTime $date)
+    public function isHoliday(DateTime $date)
     {
         try {
             return $this->findDay($date) instanceof Holiday;
@@ -117,11 +120,11 @@ class Calendar
 
     /**
      * Проверить является ли день предпраздничным
-     * @param \DateTime $date
+     * @param DateTime $date
      * @return bool
      * @throws ClientException
      */
-    public function isPreHoliday(\DateTime $date)
+    public function isPreHoliday(DateTime $date)
     {
         try {
             return $this->findDay($date) instanceof PreHolidayDay;
@@ -132,11 +135,11 @@ class Calendar
 
     /**
      * Проверить является ли день выходным
-     * @param \DateTime $date
+     * @param DateTime $date
      * @return bool
      * @throws ClientException
      */
-    public function isWeekend(\DateTime $date)
+    public function isWeekend(DateTime $date)
     {
         try {
             return $this->findDay($date) instanceof Weekend;
@@ -146,37 +149,50 @@ class Calendar
     }
 
     /**
-     * Проверить является ли день нерабочим
-     * @param \DateTime $date
+     * Проверить является ли день перенесенным праздником
+     * @param DateTime $date
      * @return bool
      * @throws ClientException
      */
-    public function isNonWorking(\DateTime $date)
+    public function isTransferredHoliday(DateTime $date)
     {
-        if ($this->isWeekend($date)) {
-            return true;
-        } elseif ($this->isHoliday($date)) {
-            return true;
-        } else {
+        try {
+            return $this->findDay($date) instanceof TransferredHoliday;
+        } catch (CalendarException $e) {
+            return false;
+        }
+    }
+
+    /**
+     * Проверить является ли день нерабочим
+     * @param DateTime $date
+     * @return bool
+     * @throws ClientException
+     */
+    public function isNonWorking(DateTime $date)
+    {
+        try {
+            return $this->findDay($date) instanceof NonWorkingDay;
+        } catch (CalendarException $e) {
             return false;
         }
     }
 
     /**
      * Подсчитать количество рабочих дней за период
-     * @param \DateTime $begin начальная дата периода
-     * @param \DateTime $end конечная дата периода
+     * @param DateTime $begin начальная дата периода
+     * @param DateTime $end конечная дата периода
      * @param bool $excludeBegin не учитывать начальную дату
      * @param bool $excludeEnd не учитывать конечную дату
      * @return int количество рабочих дней за период
      * @throws CalendarException
      * @throws ClientException
      */
-    public function countWorkingDaysForPeriod(\DateTime $begin, \DateTime $end, $excludeBegin = false, $excludeEnd = false)
+    public function countWorkingDaysForPeriod(DateTime $begin, DateTime $end, $excludeBegin = false, $excludeEnd = false)
     {
         /**
-         * @var \DateTime $dateM
-         * @var \DateTime $dateD
+         * @var DateTime $dateM
+         * @var DateTime $dateD
          */
         $count = 0;
         $begin = clone $begin;
@@ -194,8 +210,8 @@ class Calendar
         $beginM = clone $begin;
         // Начало периода сбрасываем на начало месяца чтобы интервал в 1 месяц не пропустил какой-либо месяц
         $beginM->modify('first day of this month');
-        $intervalM = \DateInterval::createFromDateString('1 month');
-        $periodM = new \DatePeriod($beginM, $intervalM, $end);
+        $intervalM = DateInterval::createFromDateString('1 month');
+        $periodM = new DatePeriod($beginM, $intervalM, $end);
 
         foreach ($periodM as $dateM) {
             $month = $this->findMonth($dateM);
@@ -215,8 +231,8 @@ class Calendar
                     $endD->modify('last day of this month')->setTime(23, 59, 59);
                 }
 
-                $intervalD = \DateInterval::createFromDateString('1 day');
-                $periodD = new \DatePeriod($begin, $intervalD, $endD, (int)$excludeBegin);
+                $intervalD = DateInterval::createFromDateString('1 day');
+                $periodD = new DatePeriod($begin, $intervalD, $endD, (int)$excludeBegin);
 
                 foreach ($periodD as $dateD) {
                     try {
@@ -233,8 +249,8 @@ class Calendar
                 // Т.к. это последний месяц периода, то отсчет начинаем с первого дня месяца
                 $beginD->modify('first day of this month');
 
-                $intervalD = \DateInterval::createFromDateString('1 day');
-                $periodD = new \DatePeriod($beginD, $intervalD, $end);
+                $intervalD = DateInterval::createFromDateString('1 day');
+                $periodD = new DatePeriod($beginD, $intervalD, $end);
 
                 foreach ($periodD as $dateD) {
                     try {
@@ -254,19 +270,19 @@ class Calendar
 
     /**
      * Подсчитать количество нерабочих дней за период
-     * @param \DateTime $begin начальная дата периода
-     * @param \DateTime $end конечная дата периода
+     * @param DateTime $begin начальная дата периода
+     * @param DateTime $end конечная дата периода
      * @param bool $excludeBegin не учитывать начальную дату
      * @param bool $excludeEnd не учитывать конечную дату
      * @return int количество рабочих дней за период
      * @throws CalendarException
      * @throws ClientException
      */
-    public function countNonWorkingDaysForPeriod(\DateTime $begin, \DateTime $end, $excludeBegin = false, $excludeEnd = false)
+    public function countNonWorkingDaysForPeriod(DateTime $begin, DateTime $end, $excludeBegin = false, $excludeEnd = false)
     {
         /**
-         * @var \DateTime $dateM
-         * @var \DateTime $dateD
+         * @var DateTime $dateM
+         * @var DateTime $dateD
          */
         $count = 0;
         $begin = clone $begin;
@@ -284,8 +300,8 @@ class Calendar
         $beginM = clone $begin;
         // Начало периода сбрасываем на начало месяца чтобы интервал в 1 месяц не пропустил какой-либо месяц
         $beginM->modify('first day of this month');
-        $intervalM = \DateInterval::createFromDateString('1 month');
-        $periodM = new \DatePeriod($beginM, $intervalM, $end);
+        $intervalM = DateInterval::createFromDateString('1 month');
+        $periodM = new DatePeriod($beginM, $intervalM, $end);
 
         foreach ($periodM as $dateM) {
             $month = $this->findMonth($dateM);
@@ -305,8 +321,8 @@ class Calendar
                     $endD->modify('last day of this month')->setTime(23, 59, 59);
                 }
 
-                $intervalD = \DateInterval::createFromDateString('1 day');
-                $periodD = new \DatePeriod($begin, $intervalD, $endD, (int)$excludeBegin);
+                $intervalD = DateInterval::createFromDateString('1 day');
+                $periodD = new DatePeriod($begin, $intervalD, $endD, (int)$excludeBegin);
 
                 foreach ($periodD as $dateD) {
                     try {
@@ -324,8 +340,8 @@ class Calendar
                 // Т.к. это последний месяц периода, то отсчет начинаем с первого дня месяца
                 $beginD->modify('first day of this month');
 
-                $intervalD = \DateInterval::createFromDateString('1 day');
-                $periodD = new \DatePeriod($beginD, $intervalD, $end);
+                $intervalD = DateInterval::createFromDateString('1 day');
+                $periodD = new DatePeriod($beginD, $intervalD, $end);
 
                 foreach ($periodD as $dateD) {
                     try {
@@ -346,18 +362,18 @@ class Calendar
 
     /**
      * Функция ищет ближайшую рабочую дату (включая сегодняшнюю)
-     * @param \DateTime|null $date
-     * @return \DateTime
+     * @param DateTime|null $date
+     * @return DateTime
      * @throws ClientException
      */
-    public function nearestWorkingDate(\DateTime $date = null)
+    public function nearestWorkingDate(DateTime $date = null)
     {
         if ($date === null) {
-            $date = (new \DateTime());
+            $date = (new DateTime());
         }
 
         while ($this->isNonWorking($date)) {
-            $interval = \DateInterval::createfromdatestring('+1 day');
+            $interval = DateInterval::createfromdatestring('+1 day');
             $date->add($interval);
         }
 

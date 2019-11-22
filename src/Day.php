@@ -2,6 +2,9 @@
 
 namespace Devmakis\ProdCalendar;
 
+use DateTime;
+use Exception;
+
 /**
  * Class Day - день производственного календаря
  * @package Devmakis\ProdCalendar
@@ -49,6 +52,11 @@ class Day
      */
     public function __construct($numberD, $numberM, $numberY)
     {
+        // Удаляем все, что не цифры
+        $numberD = preg_replace('~\D+~','', $numberD);
+        $numberM = preg_replace('~\D+~','', $numberM);
+        $numberY = preg_replace('~\D+~','', $numberY);
+
         if (strlen($numberD) == 1) {
             $numberD = '0' . $numberD;
         }
@@ -104,10 +112,11 @@ class Day
 
     /**
      * Получить объект DateTime
-     * @return \DateTime
+     * @return DateTime
+     * @throws Exception
      */
     public function getDateTime()
     {
-        return new \DateTime("{$this->numberD}-{$this->numberM}-{$this->numberY}");
+        return new DateTime("{$this->numberD}-{$this->numberM}-{$this->numberY}");
     }
 }

@@ -2,7 +2,9 @@
 
 namespace Devmakis\ProdCalendar;
 
+use DateTime;
 use Devmakis\ProdCalendar\Exceptions\CalendarException;
+use Exception;
 
 /**
  * Class Month - месяц производственного календаря
@@ -125,10 +127,11 @@ class Month
     /**
      * Подсчитать количество рабочих дней в месяце
      * @return int
+     * @throws Exception
      */
     public function countWorkingDays()
     {
-        $countDays = (new \DateTime("01-{$this->numberM}-{$this->numberY}"))->format('t');
+        $countDays = (new DateTime("01-{$this->numberM}-{$this->numberY}"))->format('t');
         return $countDays - count($this->nonWorkingDays);
     }
 }
