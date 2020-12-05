@@ -5,10 +5,12 @@ namespace Devmakis\ProdCalendar;
 use DateInterval;
 use DatePeriod;
 use DateTime;
+use DateTimeInterface;
 use Devmakis\ProdCalendar\Clients\Exceptions\ClientException;
 use Devmakis\ProdCalendar\Clients\DataGovClient;
 use Devmakis\ProdCalendar\Clients\IClient;
 use Devmakis\ProdCalendar\Exceptions\CalendarException;
+use Exception;
 
 /**
  * Class Calendar производственный календарь
@@ -68,28 +70,27 @@ class Calendar
 
     /**
      * Найти месяц из производственного календаря
-     * @param DateTime $date
+     * @param DateTimeInterface $date
      * @return Month
      * @throws CalendarException
      * @throws ClientException
      */
-    public function findMonth(DateTime $date)
+    public function findMonth(DateTimeInterface $date)
     {
         $y = $date->format(self::FORMAT_YEAR);
         $m = $date->format(self::FORMAT_MONTH);
-        $month = $this->getYear($y)->getMonth($m);
 
-        return $month;
+        return $this->getYear($y)->getMonth($m);
     }
 
     /**
      * Найти день из производственного календаря (нерабочий или предпраздничный)
-     * @param DateTime $date
+     * @param DateTimeInterface $date
      * @return Day|null
      * @throws CalendarException
      * @throws ClientException
      */
-    public function findDay(DateTime $date)
+    public function findDay(DateTimeInterface $date)
     {
         $month = $this->findMonth($date);
         $d = $date->format(self::FORMAT_DAY);
@@ -105,11 +106,11 @@ class Calendar
 
     /**
      * Проверить является ли день праздничным
-     * @param DateTime $date
+     * @param DateTimeInterface $date
      * @return bool
      * @throws ClientException
      */
-    public function isHoliday(DateTime $date)
+    public function isHoliday(DateTimeInterface $date)
     {
         try {
             return $this->findDay($date) instanceof Holiday;
@@ -120,11 +121,11 @@ class Calendar
 
     /**
      * Проверить является ли день предпраздничным
-     * @param DateTime $date
+     * @param DateTimeInterface $date
      * @return bool
      * @throws ClientException
      */
-    public function isPreHoliday(DateTime $date)
+    public function isPreHoliday(DateTimeInterface $date)
     {
         try {
             return $this->findDay($date) instanceof PreHolidayDay;
@@ -135,11 +136,11 @@ class Calendar
 
     /**
      * Проверить является ли день выходным
-     * @param DateTime $date
+     * @param DateTimeInterface $date
      * @return bool
      * @throws ClientException
      */
-    public function isWeekend(DateTime $date)
+    public function isWeekend(DateTimeInterface $date)
     {
         try {
             return $this->findDay($date) instanceof Weekend;
@@ -150,11 +151,11 @@ class Calendar
 
     /**
      * Проверить является ли день перенесенным праздником
-     * @param DateTime $date
+     * @param DateTimeInterface $date
      * @return bool
      * @throws ClientException
      */
-    public function isTransferredHoliday(DateTime $date)
+    public function isTransferredHoliday(DateTimeInterface $date)
     {
         try {
             return $this->findDay($date) instanceof TransferredHoliday;
@@ -165,11 +166,11 @@ class Calendar
 
     /**
      * Проверить является ли день нерабочим
-     * @param DateTime $date
+     * @param DateTimeInterface $date
      * @return bool
      * @throws ClientException
      */
-    public function isNonWorking(DateTime $date)
+    public function isNonWorking(DateTimeInterface $date)
     {
         try {
             return $this->findDay($date) instanceof NonWorkingDay;
@@ -180,20 +181,21 @@ class Calendar
 
     /**
      * Подсчитать количество рабочих дней за период
-     * @param DateTime $begin начальная дата периода
-     * @param DateTime $end конечная дата периода
+     * @param DateTimeInterface $begin начальная дата периода
+     * @param DateTimeInterface $end конечная дата периода
      * @param bool $excludeBegin не учитывать начальную дату
      * @param bool $excludeEnd не учитывать конечную дату
      * @return int количество рабочих дней за период
      * @throws CalendarException
      * @throws ClientException
+     * @throws Exception
      */
-    public function countWorkingDaysForPeriod(DateTime $begin, DateTime $end, $excludeBegin = false, $excludeEnd = false)
-    {
-        /**
-         * @var DateTime $dateM
-         * @var DateTime $dateD
-         */
+    public function countWorkingDaysForPeriod(
+        DateTimeInterface $begin,
+        DateTimeInterface $end,
+        $excludeBegin = false,
+        $excludeEnd = false
+    ) {
         $count = 0;
         $begin = clone $begin;
         $begin->setTime(0, 0, 0);
@@ -241,7 +243,7 @@ class Calendar
                         $count++;
                     }
                 }
-            // Если последний месяц из периода
+                // Если последний месяц из периода
             } elseif ($month->getNumberY() == $monthEnd->getNumberY() &&
                 $month->getNumberM() == $monthEnd->getNumberM()
             ) {
@@ -259,7 +261,7 @@ class Calendar
                         $count++;
                     }
                 }
-            // Промежуточные месяцы (полные)
+                // Промежуточные месяцы (полные)
             } else {
                 $count += $month->countWorkingDays();
             }
@@ -270,20 +272,20 @@ class Calendar
 
     /**
      * Подсчитать количество нерабочих дней за период
-     * @param DateTime $begin начальная дата периода
-     * @param DateTime $end конечная дата периода
+     * @param DateTimeInterface $begin начальная дата периода
+     * @param DateTimeInterface $end конечная дата периода
      * @param bool $excludeBegin не учитывать начальную дату
      * @param bool $excludeEnd не учитывать конечную дату
      * @return int количество рабочих дней за период
      * @throws CalendarException
      * @throws ClientException
      */
-    public function countNonWorkingDaysForPeriod(DateTime $begin, DateTime $end, $excludeBegin = false, $excludeEnd = false)
-    {
-        /**
-         * @var DateTime $dateM
-         * @var DateTime $dateD
-         */
+    public function countNonWorkingDaysForPeriod(
+        DateTimeInterface $begin,
+        DateTimeInterface $end,
+        $excludeBegin = false,
+        $excludeEnd = false
+    ) {
         $count = 0;
         $begin = clone $begin;
         $begin->setTime(0, 0, 0);
@@ -332,7 +334,7 @@ class Calendar
                         continue;
                     }
                 }
-            // Если последний месяц из периода
+                // Если последний месяц из периода
             } elseif ($month->getNumberY() == $monthEnd->getNumberY() &&
                 $month->getNumberM() == $monthEnd->getNumberM()
             ) {
@@ -351,7 +353,7 @@ class Calendar
                         continue;
                     }
                 }
-            // Промежуточные месяцы (полные)
+                // Промежуточные месяцы (полные)
             } else {
                 $count += $month->countNonWorkingDays();
             }
@@ -361,12 +363,12 @@ class Calendar
     }
 
     /**
-     * Функция ищет ближайшую рабочую дату (включая сегодняшнюю)
-     * @param DateTime|null $date
+     * Найти ближайшую рабочую дату (включая сегодняшнюю)
+     * @param DateTimeInterface|null $date
      * @return DateTime
      * @throws ClientException
      */
-    public function nearestWorkingDate(DateTime $date = null)
+    public function nearestWorkingDate(DateTimeInterface $date = null)
     {
         if ($date === null) {
             $date = (new DateTime());
