@@ -2,7 +2,9 @@
 
 namespace Devmakis\ProdCalendar;
 
+use DateTime;
 use Devmakis\ProdCalendar\Exceptions\CalendarException;
+use Exception;
 
 /**
  * Class Year год производственного календаря
@@ -170,6 +172,7 @@ class Year
     /**
      * Подсчитать количество рабочих дней в году
      * @return int
+     * @throws Exception
      */
     public function countWorkingDays()
     {
@@ -188,6 +191,6 @@ class Year
      */
     public function countCalendarDays()
     {
-        return (int)(new \DateTime("31-12-{$this->numberY}"))->format('z') + 1;
+        return (int)(new DateTime("31-12-{$this->numberY}"))->format('z') + 1;
     }
 }

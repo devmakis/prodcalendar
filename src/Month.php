@@ -68,7 +68,7 @@ class Month
     }
 
     /**
-     * @return Weekend[]
+     * @return Day[]
      */
     public function getNonWorkingDays()
     {
