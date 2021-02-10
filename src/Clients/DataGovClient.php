@@ -22,7 +22,7 @@ class DataGovClient implements IClient, ICachedClient
     /**
      * Корневой адрес запроса к API сервиса
      */
-    const ROOT_URL = 'http://data.gov.ru/api/json/dataset/7708660670-proizvcalendar/version/20151123T183036/content/';
+    const ROOT_URL = 'https://data.gov.ru/api/json/dataset/7708660670-proizvcalendar/version/20151123T183036/content/';
 
     /**
      * Ключи данных API сервиса
