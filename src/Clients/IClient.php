@@ -19,7 +19,7 @@ interface IClient
     public function getData();
 
     /**
-     * Получить произвоственный календарь за определенный год
+     * Получить производственный календарь за определенный год
      * @param string $numberY номер года
      * @return Year
      * @throws ClientException
