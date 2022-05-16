@@ -24,6 +24,13 @@ class DataGovClient implements IClient, ICachedClient
      */
     const ROOT_URL = 'https://data.gov.ru/api/json/dataset/7708660670-proizvcalendar/version/20191112T155500/content/';
 
+    /** @var array */
+    const DEFAULT_CURL_OPTIONS = [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_FAILONERROR    => true,
+        CURLOPT_FOLLOWLOCATION => true,
+    ];
+
     /**
      * Ключи данных API сервиса
      */
@@ -98,16 +105,6 @@ class DataGovClient implements IClient, ICachedClient
     protected $requestUrl;
 
     /**
-     * @var int количество секунд ожидания при попытке соединения
-     */
-    protected $timeout;
-
-    /**
-     * @var int максимально позволенное количество секунд для выполнения cURL-функций
-     */
-    protected $connectTimeout;
-
-    /**
      * Данные от API сервиса
      * @var array
      */
@@ -126,15 +123,30 @@ class DataGovClient implements IClient, ICachedClient
     protected $cacheLifetime = 60 * 60 * 24 * 15;
 
     /**
+     * @var array
+     */
+    private $curlOptions;
+
+    /**
      * Client constructor.
      * @param string $token
+     * @param array $curlOptions
      */
-    public function __construct($token)
+    public function __construct($token, array $curlOptions = [])
     {
         $this->token = $token;
         $this->requestUrl = self::ROOT_URL . '?access_token=' . $this->token;
-        $this->timeout = 1;
-        $this->connectTimeout = 1;
+        $this->curlOptions = array_replace(self::DEFAULT_CURL_OPTIONS, $curlOptions);
+    }
+
+    /**
+     * @param $name
+     * @param $value
+     * @return void
+     */
+    public function setCurlOption($name, $value)
+    {
+        $this->curlOptions[$name] = $value;
     }
 
     /**
@@ -142,7 +154,7 @@ class DataGovClient implements IClient, ICachedClient
      */
     public function setTimeout($timeout)
     {
-        $this->timeout = $timeout;
+        $this->setCurlOption(CURLOPT_TIMEOUT, $timeout);
     }
 
     /**
@@ -150,7 +162,7 @@ class DataGovClient implements IClient, ICachedClient
      */
     public function setConnectTimeout($connectTimeout)
     {
-        $this->connectTimeout = $connectTimeout;
+        $this->setCurlOption(CURLOPT_CONNECTTIMEOUT, $connectTimeout);
     }
 
     /**
@@ -193,13 +205,7 @@ class DataGovClient implements IClient, ICachedClient
     public function request()
     {
         $curl = curl_init($this->requestUrl);
-        curl_setopt_array($curl, [
-            CURLOPT_TIMEOUT        => $this->timeout,
-            CURLOPT_CONNECTTIMEOUT => $this->connectTimeout,
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_FAILONERROR    => true,
-            CURLOPT_FOLLOWLOCATION => true,
-        ]);
+        curl_setopt_array($curl, $this->curlOptions);
         $response = curl_exec($curl);
 
         if ($response === false) {
