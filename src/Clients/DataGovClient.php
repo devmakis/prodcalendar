@@ -26,6 +26,7 @@ class DataGovClient implements IClient, ICachedClient
 
     /** @var array */
     const DEFAULT_CURL_OPTIONS = [
+        CURLOPT_CONNECTTIMEOUT => 10,
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_FAILONERROR    => true,
         CURLOPT_FOLLOWLOCATION => true,
