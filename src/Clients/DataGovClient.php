@@ -94,6 +94,8 @@ class DataGovClient implements IClient, ICachedClient
         '04.11' => 'День народного единства',
     ];
 
+    const CACHE_EXTEND_TIME = 3600 * 24;
+
     /**
      * @var string ключ для работы с API сервиса
      */
@@ -383,11 +385,16 @@ class DataGovClient implements IClient, ICachedClient
             if ($timeLastUpdateFile < time() - $this->cacheLifetime) {
                 try {
                     $this->writeCache();
-                    // Когда кэш есть и он просто просрочен,
-                    // если от сервера приходит ошибка или пустой ответ, то используем существующий кэш
-                    // поэтому отлавливаем здесь эти исключения
                 } catch (ClientCurlException $e) {
+                    if (in_array($e->getCode(), [401, 403])) {
+                        throw $e;
+                    }
+
+                    // Изменяем время модификации файла кеша, если от сервера приходит ошибка
+                    touch($this->getCacheFile(), time() + self::CACHE_EXTEND_TIME);
                 } catch (ClientEmptyResponseException $e) {
+                    // Изменяем время модификации файла кеша, если от сервера приходит пустой ответ
+                    touch($this->getCacheFile(), time() + self::CACHE_EXTEND_TIME);
                 }
             }
         }
