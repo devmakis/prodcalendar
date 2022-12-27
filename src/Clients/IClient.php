@@ -12,13 +12,6 @@ use Devmakis\ProdCalendar\Year;
 interface IClient
 {
     /**
-     * Получить данные от клиента
-     * @return mixed
-     * @throws ClientException
-     */
-    public function getData();
-
-    /**
      * Получить производственный календарь за определенный год
      * @param string $numberY номер года
      * @return Year

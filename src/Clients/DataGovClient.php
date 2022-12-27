@@ -5,12 +5,14 @@
 
 namespace Devmakis\ProdCalendar\Clients;
 
+use Devmakis\ProdCalendar\Cache\ICachable;
 use Devmakis\ProdCalendar\Clients\Exceptions\ClientCacheException;
 use Devmakis\ProdCalendar\Clients\Exceptions\ClientCurlException;
 use Devmakis\ProdCalendar\Clients\Exceptions\ClientEmptyResponseException;
 use Devmakis\ProdCalendar\Clients\Exceptions\ClientException;
 use Devmakis\ProdCalendar\Day;
 use Devmakis\ProdCalendar\Holiday;
+use Devmakis\ProdCalendar\Holidays;
 use Devmakis\ProdCalendar\Month;
 use Devmakis\ProdCalendar\PreHolidayDay;
 use Devmakis\ProdCalendar\TransferredHoliday;
@@ -19,6 +21,8 @@ use Devmakis\ProdCalendar\Year;
 
 class DataGovClient implements IClient, ICachedClient
 {
+    use Holidays;
+
     /**
      * Корневой адрес запроса к API сервиса
      */
@@ -271,14 +275,14 @@ class DataGovClient implements IClient, ICachedClient
             $months = [];
 
             foreach (DataGovClient::API_DATA_KEYS['MONTHS'] as $numberM => $keyM) {
-                $days = explode(DataGovClient::API_DELIMITER_DAYS, $row[$keyM]);
+                $days = explode(self::API_DELIMITER_DAYS, $row[$keyM]);
                 $nonWorkingDays = [];
                 $preHolidayDays = [];
 
                 foreach ($days as $numberD) {
                     // Определение предпраздничного дня по метке от АПИ
-                    if (strpos($numberD, DataGovClient::API_LABEL_PRE_HOLIDAY) !== false) {
-                        $numberD = str_replace(DataGovClient::API_LABEL_PRE_HOLIDAY, '', $numberD);
+                    if (strpos($numberD, self::API_LABEL_PRE_HOLIDAY) !== false) {
+                        $numberD = str_replace(self::API_LABEL_PRE_HOLIDAY, '', $numberD);
                         $preHolidayDay = new PreHolidayDay($numberD, $numberM, $numberY);
                         $preHolidayDays[$preHolidayDay->getNumberD()] = $preHolidayDay;
 
@@ -286,8 +290,8 @@ class DataGovClient implements IClient, ICachedClient
                     }
 
                     // Определение перенесенного праздника по метке от АПИ
-                    if (strpos($numberD, DataGovClient::API_LABEL_TRANSFERRED_HOLIDAY) !== false) {
-                        $numberD = str_replace(DataGovClient::API_LABEL_TRANSFERRED_HOLIDAY, '', $numberD);
+                    if (strpos($numberD, self::API_LABEL_TRANSFERRED_HOLIDAY) !== false) {
+                        $numberD = str_replace(self::API_LABEL_TRANSFERRED_HOLIDAY, '', $numberD);
                         $nonWorkingDay = new TransferredHoliday($numberD, $numberM, $numberY);
                         $nonWorkingDays[$nonWorkingDay->getNumberD()] = $nonWorkingDay;
 
@@ -297,10 +301,11 @@ class DataGovClient implements IClient, ICachedClient
                     // Определение праздничного
                     $nonWorkingDay = new Day($numberD, $numberM, $numberY);
                     $keyHoliday = $nonWorkingDay->getNumberD() . '.' . $nonWorkingDay->getNumberM();
+                    $nonworkingHolidays = $this->getNonworkingHolidays();
 
-                    if (array_key_exists($keyHoliday, self::NONWORKING_HOLIDAYS)) {
+                    if (array_key_exists($keyHoliday, $nonworkingHolidays)) {
                         $nonWorkingDay = new Holiday($numberD, $numberM, $numberY);
-                        $nonWorkingDay->setDescription(self::NONWORKING_HOLIDAYS[$keyHoliday]);
+                        $nonWorkingDay->setDescription($nonworkingHolidays[$keyHoliday]);
                         $nonWorkingDays[$nonWorkingDay->getNumberD()] = $nonWorkingDay;
 
                         continue;
@@ -326,9 +331,9 @@ class DataGovClient implements IClient, ICachedClient
             }
 
             $calendar = new Year($numberY, $months);
-            $calendar->setNumWorkingHours40($row[DataGovClient::API_DATA_KEYS['NUM_WORKING_HOURS_40']]);
-            $calendar->setNumWorkingHours36($row[DataGovClient::API_DATA_KEYS['NUM_WORKING_HOURS_36']]);
-            $calendar->setNumWorkingHours24($row[DataGovClient::API_DATA_KEYS['NUM_WORKING_HOURS_24']]);
+            $calendar->setNumWorkingHours40($row[self::API_DATA_KEYS['NUM_WORKING_HOURS_40']]);
+            $calendar->setNumWorkingHours36($row[self::API_DATA_KEYS['NUM_WORKING_HOURS_36']]);
+            $calendar->setNumWorkingHours24($row[self::API_DATA_KEYS['NUM_WORKING_HOURS_24']]);
 
             return $calendar;
         }

@@ -5,6 +5,7 @@ namespace Devmakis\ProdCalendar\Clients;
 /**
  * Interface IClientCacheFile интерфейс для реализации кэша в клиенте
  * @package Devmakis\ProdCalendar\Clients
+ * @deprecated
  */
 interface ICachedClient
 {

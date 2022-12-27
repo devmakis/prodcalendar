@@ -23,12 +23,12 @@ class Year
     protected $months = [];
 
     /**
-     * @var int всего рабочих дней в году
+     * @var int|null всего рабочих дней в году
      */
     protected $totalWorkingDays;
 
     /**
-     * @var int всего праздничных и выходных дней в году
+     * @var int|null всего праздничных и выходных дней в году
      */
     protected $totalNonworkingDays;
 
@@ -72,22 +72,6 @@ class Year
     public function getMonths()
     {
         return $this->months;
-    }
-
-    /**
-     * @return int
-     */
-    public function getTotalWorkingDays()
-    {
-        return $this->totalWorkingDays;
-    }
-
-    /**
-     * @return int
-     */
-    public function getTotalNonworkingDays()
-    {
-        return $this->totalNonworkingDays;
     }
 
     /**
@@ -160,13 +144,17 @@ class Year
      */
     public function countNonWorkingDays()
     {
-        $count = 0;
-
-        foreach ($this->months as $month) {
-            $count += $month->countNonWorkingDays();
+        if ($this->totalNonworkingDays !== null) {
+            return $this->totalNonworkingDays;
         }
 
-        return $count;
+        $this->totalNonworkingDays = 0;
+
+        foreach ($this->months as $month) {
+            $this->totalNonworkingDays += $month->countNonWorkingDays();
+        }
+
+        return $this->totalNonworkingDays;
     }
 
     /**
@@ -176,13 +164,17 @@ class Year
      */
     public function countWorkingDays()
     {
-        $count = 0;
-
-        foreach ($this->months as $month) {
-            $count += $month->countWorkingDays();
+        if ($this->totalWorkingDays !== null) {
+            return $this->totalWorkingDays;
         }
 
-        return $count;
+        $this->totalWorkingDays = 0;
+
+        foreach ($this->months as $month) {
+            $this->totalWorkingDays += $month->countWorkingDays();
+        }
+
+        return $this->totalWorkingDays;
     }
 
     /**
