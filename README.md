@@ -1,6 +1,6 @@
 ## Описание
 
-Библиотека для работы с производственным календарем на основе открытых данных России [Data.gov.ru](https://data.gov.ru). 
+Библиотека для работы с производственным календарем на основе открытых данных России [Data.gov.ru](https://data.gov.ru) или [xmlcalendar.ru](http://xmlcalendar.ru). 
 Есть возможность реализовать свой клиент для получения данных от других источников.
 
 ## Установка
@@ -14,6 +14,16 @@ use Devmakis\ProdCalendar\Clients\DataGovClient;
 use Devmakis\ProdCalendar\Calendar;
 
 $client = new DataGovClient('YOUR_TOKEN');
+$calendar = new Calendar($client);
+```
+
+```php
+use Devmakis\ProdCalendar\Cache\FileJsonCache;
+use Devmakis\ProdCalendar\Clients\XmlCalendarClient;
+use Devmakis\ProdCalendar\Calendar;
+
+$cache = new FileJsonCache('PATH_FILE', 3600);
+$client = new XmlCalendarClient($cache);
 $calendar = new Calendar($client);
 ```
 
