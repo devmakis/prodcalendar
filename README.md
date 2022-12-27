@@ -22,7 +22,7 @@ use Devmakis\ProdCalendar\Cache\FileJsonCache;
 use Devmakis\ProdCalendar\Clients\XmlCalendarClient;
 use Devmakis\ProdCalendar\Calendar;
 
-$cache = new FileJsonCache('PATH_FILE', 3600);
+$cache = new FileJsonCache('FILE_PATH', 3600);
 $client = new XmlCalendarClient($cache);
 $calendar = new Calendar($client);
 ```
