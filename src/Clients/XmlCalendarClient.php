@@ -7,6 +7,7 @@ namespace Devmakis\ProdCalendar\Clients;
 
 use Devmakis\ProdCalendar\Cache\Exception\CacheException;
 use Devmakis\ProdCalendar\Cache\ICachable;
+use Devmakis\ProdCalendar\Clients\Exceptions\ClientCurlException;
 use Devmakis\ProdCalendar\Clients\Exceptions\ClientException;
 use Devmakis\ProdCalendar\Day;
 use Devmakis\ProdCalendar\Holiday;
@@ -48,11 +49,16 @@ class XmlCalendarClient implements IClient
      * @var ICachable|null
      */
     protected $cache;
+    /**
+     * @var Curl|null
+     */
+    private $curl;
 
-    public function __construct($country, ICachable $cache = null)
+    public function __construct($country, ICachable $cache = null, Curl $curl = null)
     {
         $this->country = $country;
         $this->cache = $cache;
+        $this->curl = $curl ?: new Curl();
     }
 
     /**
@@ -70,16 +76,15 @@ class XmlCalendarClient implements IClient
             }
 
             if (!isset($this->data[$this->country][$numberY])) {
-                $contents = file_get_contents(sprintf(
-                    'http://xmlcalendar.ru/data/%s/%s/calendar.json',
-                    $this->country,
-                    $numberY
-                ));
-
-                if ($contents) {
+                try {
+                    $contents = $this->curl->request(sprintf(
+                        'http://xmlcalendar.ru/data/%s/%s/calendar.json',
+                        $this->country,
+                        $numberY
+                    ));
                     $this->data[$this->country][$numberY] = \json_decode($contents, true);
                     $this->cache->write($this->data);
-                } else {
+                } catch (ClientCurlException $e) {
                     $this->data = $this->cache->extend();
                 }
             }
