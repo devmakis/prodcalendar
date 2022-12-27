@@ -41,12 +41,17 @@ class XmlCalendarClient implements IClient
      */
     protected $data = [];
     /**
+     * @var string
+     */
+    private $country;
+    /**
      * @var ICachable|null
      */
     protected $cache;
 
-    public function __construct(ICachable $cache = null)
+    public function __construct($country, ICachable $cache = null)
     {
+        $this->country = $country;
         $this->cache = $cache;
     }
 
@@ -64,13 +69,15 @@ class XmlCalendarClient implements IClient
             } catch (CacheException $e) {
             }
 
-            if (!isset($this->data[$numberY])) {
+            if (!isset($this->data[$this->country][$numberY])) {
                 $contents = file_get_contents(sprintf(
-                    'http://xmlcalendar.ru/data/ru/%s/calendar.json', $numberY
+                    'http://xmlcalendar.ru/data/%s/%s/calendar.json',
+                    $this->country,
+                    $numberY
                 ));
 
                 if ($contents) {
-                    $this->data[$numberY] = \json_decode($contents, true);
+                    $this->data[$this->country][$numberY] = \json_decode($contents, true);
                     $this->cache->write($this->data);
                 } else {
                     $this->data = $this->cache->extend();
@@ -78,13 +85,13 @@ class XmlCalendarClient implements IClient
             }
         }
 
-        if (!isset($this->data[$numberY])) {
+        if (!isset($this->data[$this->country][$numberY])) {
             throw new ClientException('Year not found');
         }
 
         $months = [];
 
-        foreach ($this->data[$numberY]['months'] as $monthData) {
+        foreach ($this->data[$this->country][$numberY]['months'] as $monthData) {
             $numberM = $monthData['month'];
             $days = explode(self::API_DELIMITER_DAYS, $monthData['days']);
             $nonWorkingDays = [];
@@ -142,9 +149,9 @@ class XmlCalendarClient implements IClient
         }
 
         $calendar = new Year($numberY, $months);
-        $calendar->setNumWorkingHours40($this->data[$numberY]['statistic']['hours40']);
-        $calendar->setNumWorkingHours36($this->data[$numberY]['statistic']['hours36']);
-        $calendar->setNumWorkingHours24($this->data[$numberY]['statistic']['hours24']);
+        $calendar->setNumWorkingHours40($this->data[$this->country][$numberY]['statistic']['hours40']);
+        $calendar->setNumWorkingHours36($this->data[$this->country][$numberY]['statistic']['hours36']);
+        $calendar->setNumWorkingHours24($this->data[$this->country][$numberY]['statistic']['hours24']);
 
         return $calendar;
     }

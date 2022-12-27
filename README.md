@@ -1,6 +1,7 @@
 ## Описание
 
-Библиотека для работы с производственным календарем на основе открытых данных России [Data.gov.ru](https://data.gov.ru) или [xmlcalendar.ru](http://xmlcalendar.ru). 
+Библиотека для работы с производственным календарем России, Белоруссии, Казахстана и Узбекистана. 
+Реализованы клиенты для двух источников данных - [Data.gov.ru](https://data.gov.ru) или [xmlcalendar.ru](http://xmlcalendar.ru). 
 Есть возможность реализовать свой клиент для получения данных от других источников.
 
 ## Установка
@@ -21,9 +22,10 @@ $calendar = new Calendar($client);
 use Devmakis\ProdCalendar\Cache\FileJsonCache;
 use Devmakis\ProdCalendar\Clients\XmlCalendarClient;
 use Devmakis\ProdCalendar\Calendar;
+use Devmakis\ProdCalendar\Country;
 
 $cache = new FileJsonCache('FILE_PATH', 3600);
-$client = new XmlCalendarClient($cache);
+$client = new XmlCalendarClient(Country::RUSSIA, $cache);
 $calendar = new Calendar($client);
 ```
 
