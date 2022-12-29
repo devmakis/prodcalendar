@@ -69,7 +69,7 @@ class XmlCalendarClient implements IClient
      */
     public function getYear($numberY)
     {
-        if (empty($this->data)) {
+        if (!isset($this->data[$this->country][$numberY])) {
             try {
                 $this->data = $this->cache->read();
             } catch (CacheException $e) {
