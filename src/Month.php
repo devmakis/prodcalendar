@@ -108,6 +108,8 @@ class Month
     {
         $d = (int)$d;
 
+        if (strlen($d) == 1) $d = '0' . $d;
+
         if (!isset($this->preHolidayDays[$d])) {
             throw new CalendarException("Day «{$d}» not found");
         }
