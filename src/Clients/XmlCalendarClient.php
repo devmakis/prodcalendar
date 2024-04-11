@@ -78,7 +78,7 @@ class XmlCalendarClient implements IClient
             if (!isset($this->data[$this->country][$numberY])) {
                 try {
                     $contents = $this->curl->request(sprintf(
-                        'http://xmlcalendar.ru/data/%s/%s/calendar.json',
+                        'https://xmlcalendar.github.io/data/%s/%s/calendar.json',
                         $this->country,
                         $numberY
                     ));
