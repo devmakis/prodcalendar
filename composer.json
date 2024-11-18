@@ -11,9 +11,10 @@
     }
   ],
   "require": {
-    "php": ">=5.6",
-    "ext-curl": "*",
-    "ext-json": "*"
+    "php": ">=8.3",
+    "psr/simple-cache": "^3.0",
+    "psr/http-client": "^1.0",
+    "guzzlehttp/psr7": "^2.6"
   },
   "autoload": {
     "psr-4": {

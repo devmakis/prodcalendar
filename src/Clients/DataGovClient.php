@@ -1,11 +1,7 @@
 <?php
-/**
- * Клиент для получения данных производственных календарей (от сервиса открытых данных России Data.gov.ru)
- */
 
 namespace Devmakis\ProdCalendar\Clients;
 
-use Devmakis\ProdCalendar\Cache\ICachable;
 use Devmakis\ProdCalendar\Clients\Exceptions\ClientCacheException;
 use Devmakis\ProdCalendar\Clients\Exceptions\ClientCurlException;
 use Devmakis\ProdCalendar\Clients\Exceptions\ClientEmptyResponseException;
@@ -19,29 +15,26 @@ use Devmakis\ProdCalendar\TransferredHoliday;
 use Devmakis\ProdCalendar\Weekend;
 use Devmakis\ProdCalendar\Year;
 
+/**
+ * Client for obtaining production calendar data (from the Russian open data service Data.gov.ru)
+ * @deprecated
+ */
 class DataGovClient implements IClient, ICachedClient
 {
     use Holidays;
 
-    /**
-     * Корневой адрес запроса к API сервиса
-     */
-    const ROOT_URL = 'https://data.gov.ru/api/json/dataset/7708660670-proizvcalendar/version/20191112T155500/content/';
+    public const ROOT_URL = 'https://data.gov.ru/api/json/dataset/7708660670-proizvcalendar/version/20191112T155500/content/';
 
-    /** @var array */
-    const DEFAULT_CURL_OPTIONS = [
+    public const DEFAULT_CURL_OPTIONS = [
         CURLOPT_CONNECTTIMEOUT => 10,
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_FAILONERROR    => true,
         CURLOPT_FOLLOWLOCATION => true,
     ];
 
-    /**
-     * Ключи данных API сервиса
-     */
-    const API_DATA_KEYS = [
-        'YEAR'                  => 'Год/Месяц',
-        'MONTHS'                => [
+    public const API_DATA_KEYS = [
+        'YEAR' => 'Год/Месяц',
+        'MONTHS' => [
             '01' => 'Январь',
             '02' => 'Февраль',
             '03' => 'Март',
@@ -55,34 +48,24 @@ class DataGovClient implements IClient, ICachedClient
             '11' => 'Ноябрь',
             '12' => 'Декабрь',
         ],
-        'TOTAL_WORKING_DAYS'    => 'Всего рабочих дней',
+        'TOTAL_WORKING_DAYS' => 'Всего рабочих дней',
         'TOTAL_NONWORKING_DAYS' => 'Всего праздничных и выходных дней',
-        'NUM_WORKING_HOURS_40'  => 'Количество рабочих часов при 40-часовой рабочей неделе',
-        'NUM_WORKING_HOURS_36'  => 'Количество рабочих часов при 36-часовой рабочей неделе',
-        'NUM_WORKING_HOURS_24'  => 'Количество рабочих часов при 24-часовой рабочей неделе',
+        'NUM_WORKING_HOURS_40' => 'Количество рабочих часов при 40-часовой рабочей неделе',
+        'NUM_WORKING_HOURS_36' => 'Количество рабочих часов при 36-часовой рабочей неделе',
+        'NUM_WORKING_HOURS_24' => 'Количество рабочих часов при 24-часовой рабочей неделе',
     ];
 
-    /**
-     * Разделитель дней в данных API сервиса
-     */
-    const API_DELIMITER_DAYS = ',';
+    public const API_DELIMITER_DAYS = ',';
+
+    public const API_LABEL_PRE_HOLIDAY = '*';
+
+    public const API_LABEL_TRANSFERRED_HOLIDAY = '+';
 
     /**
-     * Метка предпраздничного дня в данных API сервиса
+     * @deprecated
+     * @see self::getNonworkingHolidays()
      */
-    const API_LABEL_PRE_HOLIDAY = '*';
-
-    /**
-     * Метка перенесенного праздника в данных API сервиса
-     */
-    const API_LABEL_TRANSFERRED_HOLIDAY = '+';
-
-    /**
-     * Нерабочие праздничные дни
-     * согласно Статье 112 "Трудовой кодекс Российской Федерации" от 30.12.2001 N 197-ФЗ (ред. от 05.02.2018)
-     * @link https://www.consultant.ru/document/cons_doc_LAW_34683/98ef2900507766e70ff29c0b9d8e2353ea80a1cf/#dst102376
-     */
-    const NONWORKING_HOLIDAYS = [
+    public const NONWORKING_HOLIDAYS = [
         '01.01' => 'Новогодние каникулы',
         '02.01' => 'Новогодние каникулы',
         '03.01' => 'Новогодние каникулы',
@@ -99,142 +82,86 @@ class DataGovClient implements IClient, ICachedClient
         '04.11' => 'День народного единства',
     ];
 
-    const CACHE_EXTEND_TIME = 3600 * 24;
+    public const CACHE_EXTEND_TIME = 3600 * 24;
 
-    /**
-     * @var string ключ для работы с API сервиса
-     */
-    protected $token;
+    protected string $requestUrl;
 
-    /**
-     * @var string полный адрес запроса к API
-     */
-    protected $requestUrl;
+    protected array $data;
 
-    /**
-     * Данные от API сервиса
-     * @var array
-     */
-    protected $data;
+    protected string $cacheFile;
 
-    /**
-     * Путь к файлу, в котором сохраненны данные от API сервиса
-     * @var string
-     */
-    protected $cacheFile;
+    protected int $cacheLifetime = 60 * 60 * 24 * 15;
 
-    /**
-     * Время жизни кэша в секундах (по умолчанию 15 суток)
-     * @var int
-     */
-    protected $cacheLifetime = 60 * 60 * 24 * 15;
-
-    /**
-     * @var array
-     */
-    private $curlOptions;
-
-    /**
-     * Client constructor.
-     * @param string $token
-     * @param array $curlOptions
-     */
-    public function __construct($token, array $curlOptions = [])
-    {
-        $this->token = $token;
+    public function __construct(
+        protected string $token,
+        protected array $curlOptions = []
+    ) {
         $this->requestUrl = self::ROOT_URL . '?access_token=' . $this->token;
-        $this->curlOptions = array_replace(self::DEFAULT_CURL_OPTIONS, $curlOptions);
+        $this->curlOptions = \array_replace(self::DEFAULT_CURL_OPTIONS, $curlOptions);
     }
 
-    /**
-     * @param $name
-     * @param $value
-     * @return void
-     */
-    public function setCurlOption($name, $value)
+    public function setCurlOption($name, $value): void
     {
         $this->curlOptions[$name] = $value;
     }
 
-    /**
-     * @param int $timeout
-     */
-    public function setTimeout($timeout)
+    public function setTimeout(int $timeout): void
     {
         $this->setCurlOption(CURLOPT_TIMEOUT, $timeout);
     }
 
-    /**
-     * @param int $connectTimeout
-     */
-    public function setConnectTimeout($connectTimeout)
+    public function setConnectTimeout(int $connectTimeout): void
     {
         $this->setCurlOption(CURLOPT_CONNECTTIMEOUT, $connectTimeout);
     }
 
-    /**
-     * @return string
-     */
-    public function getCacheFile()
+    public function getCacheFile(): string
     {
         return $this->cacheFile;
     }
 
-    /**
-     * @param string $cacheFile
-     */
-    public function setCacheFile($cacheFile)
+    public function setCacheFile(string $cacheFile): void
     {
         $this->cacheFile = $cacheFile;
     }
 
-    /**
-     * @return int
-     */
-    public function getCacheLifetime()
+    public function getCacheLifetime(): int
     {
         return $this->cacheLifetime;
     }
 
-    /**
-     * @param int $cacheLifetime
-     */
-    public function setCacheLifetime($cacheLifetime)
+    public function setCacheLifetime(int $cacheLifetime): void
     {
         $this->cacheLifetime = (int)$cacheLifetime;
     }
 
     /**
-     * Запросит данные у API сервиса
      * @throws ClientCurlException
-     * @return string $response
      */
-    public function request()
+    public function request(): string
     {
-        $curl = curl_init($this->requestUrl);
-        curl_setopt_array($curl, $this->curlOptions);
-        $response = curl_exec($curl);
+        $curl = \curl_init($this->requestUrl);
+        \curl_setopt_array($curl, $this->curlOptions);
+        $response = \curl_exec($curl);
 
         if ($response === false) {
-            $errorCode = curl_errno($curl);
-            $errorMessage = curl_error($curl);
-            curl_close($curl);
+            $errorCode = \curl_errno($curl);
+            $errorMessage = \curl_error($curl);
+            \curl_close($curl);
 
             throw new ClientCurlException('cURL request get error - ' . $errorMessage, $errorCode);
         }
 
-        curl_close($curl);
+        \curl_close($curl);
 
         return $response;
     }
 
     /**
-     * Получить данные от API сервиса
-     * @return array
      * @throws ClientCurlException
      * @throws ClientException
      */
-    public function getData()
+    public function getData(): array
     {
         if ($this->data) {
             return $this->data;
@@ -246,7 +173,7 @@ class DataGovClient implements IClient, ICachedClient
             $result = $this->request();
         }
 
-        $this->data = json_decode($result, true);
+        $this->data = \json_decode($result, true);
 
         if (!$this->data) {
             throw new ClientException('Data is empty or incorrect');
@@ -256,81 +183,75 @@ class DataGovClient implements IClient, ICachedClient
     }
 
     /**
-     * Получить год производственного календаря
-     * @param $numberY
-     * @return Year
      * @throws ClientException
+     * @throws \Exception
      */
-    public function getYear($numberY)
+    public function getYear(int $yearNumber): Year
     {
-        $numberY = (string)$numberY;
-
         foreach ($this->getData() as $row) {
-            $responseYear = (string)$row[DataGovClient::API_DATA_KEYS['YEAR']];
+            $responseYear = (int)$row[DataGovClient::API_DATA_KEYS['YEAR']];
 
-            if ($responseYear !== $numberY) {
+            if ($responseYear != $yearNumber) {
                 continue;
             }
 
             $months = [];
 
-            foreach (DataGovClient::API_DATA_KEYS['MONTHS'] as $numberM => $keyM) {
-                $days = explode(self::API_DELIMITER_DAYS, $row[$keyM]);
+            foreach (DataGovClient::API_DATA_KEYS['MONTHS'] as $monthNumber => $keyM) {
+                $monthNumber = (int)$monthNumber;
+                $days = \explode(self::API_DELIMITER_DAYS, $row[$keyM]);
                 $nonWorkingDays = [];
                 $preHolidayDays = [];
 
-                foreach ($days as $numberD) {
-                    // Определение предпраздничного дня по метке от АПИ
-                    if (strpos($numberD, self::API_LABEL_PRE_HOLIDAY) !== false) {
-                        $numberD = str_replace(self::API_LABEL_PRE_HOLIDAY, '', $numberD);
-                        $preHolidayDay = new PreHolidayDay($numberD, $numberM, $numberY);
+                foreach ($days as $dayNumber) {
+                    $dayNumber = (int)$dayNumber;
+
+                    if (\str_contains($dayNumber, self::API_LABEL_PRE_HOLIDAY)) {
+                        $dayNumber = \str_replace(self::API_LABEL_PRE_HOLIDAY, '', $dayNumber);
+                        $preHolidayDay = new PreHolidayDay($dayNumber, $monthNumber, $yearNumber);
                         $preHolidayDays[$preHolidayDay->getNumberD()] = $preHolidayDay;
 
                         continue;
                     }
 
-                    // Определение перенесенного праздника по метке от АПИ
-                    if (strpos($numberD, self::API_LABEL_TRANSFERRED_HOLIDAY) !== false) {
-                        $numberD = str_replace(self::API_LABEL_TRANSFERRED_HOLIDAY, '', $numberD);
-                        $nonWorkingDay = new TransferredHoliday($numberD, $numberM, $numberY);
+                    if (\str_contains($dayNumber, self::API_LABEL_TRANSFERRED_HOLIDAY)) {
+                        $dayNumber = \str_replace(self::API_LABEL_TRANSFERRED_HOLIDAY, '', $dayNumber);
+                        $nonWorkingDay = new TransferredHoliday($dayNumber, $monthNumber, $yearNumber);
                         $nonWorkingDays[$nonWorkingDay->getNumberD()] = $nonWorkingDay;
 
                         continue;
                     }
 
-                    // Определение праздничного
-                    $nonWorkingDay = new Day($numberD, $numberM, $numberY);
+                    $nonWorkingDay = new Day($dayNumber, $monthNumber, $yearNumber);
                     $keyHoliday = $nonWorkingDay->getNumberD() . '.' . $nonWorkingDay->getNumberM();
                     $nonworkingHolidays = $this->getNonworkingHolidays();
 
-                    if (array_key_exists($keyHoliday, $nonworkingHolidays)) {
-                        $nonWorkingDay = new Holiday($numberD, $numberM, $numberY);
+                    if (\array_key_exists($keyHoliday, $nonworkingHolidays)) {
+                        $nonWorkingDay = new Holiday($dayNumber, $monthNumber, $yearNumber);
                         $nonWorkingDay->setDescription($nonworkingHolidays[$keyHoliday]);
                         $nonWorkingDays[$nonWorkingDay->getNumberD()] = $nonWorkingDay;
 
                         continue;
                     }
 
-                    // Определение перенесенного праздника, если нет меки от АПИ (это не сб и не вск)
-                    $nDayWeek = $nonWorkingDay->getDateTime()->format('N');
+                    $nDayWeek = (new \DateTime($nonWorkingDay))->format('N');
 
-                    if (!in_array($nDayWeek, [6, 7])) {
-                        $nonWorkingDay = new TransferredHoliday($numberD, $numberM, $numberY);
+                    if (!\in_array($nDayWeek, [6, 7])) {
+                        $nonWorkingDay = new TransferredHoliday($dayNumber, $monthNumber, $yearNumber);
                         $nonWorkingDays[$nonWorkingDay->getNumberD()] = $nonWorkingDay;
 
                         continue;
                     }
 
-                    // Если не все что выше, значит это обычный выходной день
-                    $nonWorkingDay = new Weekend($numberD, $numberM, $numberY);
+                    $nonWorkingDay = new Weekend($dayNumber, $monthNumber, $yearNumber);
                     $nonWorkingDays[$nonWorkingDay->getNumberD()] = $nonWorkingDay;
                 }
 
-                $month = new Month($numberM, $numberY, $nonWorkingDays, $preHolidayDays);
+                $month = new Month($monthNumber, $yearNumber, $nonWorkingDays, $preHolidayDays);
                 $months[$month->getNumberM()] = $month;
             }
 
-            $calendar = new Year($numberY, $months);
+            $calendar = new Year($yearNumber, $months);
             $calendar->setNumWorkingHours40($row[self::API_DATA_KEYS['NUM_WORKING_HOURS_40']]);
             $calendar->setNumWorkingHours36($row[self::API_DATA_KEYS['NUM_WORKING_HOURS_36']]);
             $calendar->setNumWorkingHours24($row[self::API_DATA_KEYS['NUM_WORKING_HOURS_24']]);
@@ -338,32 +259,31 @@ class DataGovClient implements IClient, ICachedClient
             return $calendar;
         }
 
-        throw new ClientException("Production calendar is not found for «{$numberY}» year");
+        throw new ClientException('Production calendar is not found for «' . $yearNumber . '» year');
     }
 
     /**
-     * Записать в кэш (в файл)
      * @throws ClientCacheException
      * @throws ClientCurlException
      * @throws ClientEmptyResponseException
      */
-    public function writeCache()
+    public function writeCache(): void
     {
         if (!$this->getCacheFile()) {
             throw new ClientCacheException('The path to the cached file is not set');
         }
 
         $result = $this->request();
-        $arrResult = json_decode($result, true);
+        $arrResult = \json_decode($result, true);
 
         if (empty($arrResult)) {
             throw new ClientEmptyResponseException('Empty response');
         }
 
-        $contents = file_put_contents($this->getCacheFile(), $result);
+        $contents = \file_put_contents($this->getCacheFile(), $result);
 
         if ($contents === false) {
-            $error = error_get_last();
+            $error = \error_get_last();
             throw new ClientCacheException($error['message']);
         } elseif ($contents === 0) {
             throw new ClientCacheException('file_put_contents: number of bytes written to the file = 0');
@@ -371,44 +291,42 @@ class DataGovClient implements IClient, ICachedClient
     }
 
     /**
-     * Прочитать из кэша (из файла)
-     * @return string
      * @throws ClientCacheException
      * @throws ClientCurlException
      * @throws ClientEmptyResponseException
      */
-    public function readCache()
+    public function readCache(): string
     {
         if (!$this->getCacheFile()) {
             throw new ClientCacheException('The path to the cached file is not set');
         }
 
-        if (!file_exists($this->getCacheFile())) {
+        if (!\file_exists($this->getCacheFile())) {
             $this->writeCache();
         } else {
-            $timeLastUpdateFile = filemtime($this->getCacheFile());
+            $timeLastUpdateFile = \filemtime($this->getCacheFile());
 
-            if ($timeLastUpdateFile < time() - $this->cacheLifetime) {
+            if ($timeLastUpdateFile < \time() - $this->cacheLifetime) {
                 try {
                     $this->writeCache();
                 } catch (ClientCurlException $e) {
-                    if (in_array($e->getCode(), [401, 403])) {
+                    if (\in_array($e->getCode(), [401, 403])) {
                         throw $e;
                     }
 
-                    // Изменяем время модификации файла кеша, если от сервера приходит ошибка
-                    touch($this->getCacheFile(), time() + self::CACHE_EXTEND_TIME);
+                    // We change the modification time of the cache file if an error comes from the server
+                    \touch($this->getCacheFile(), time() + self::CACHE_EXTEND_TIME);
                 } catch (ClientEmptyResponseException $e) {
-                    // Изменяем время модификации файла кеша, если от сервера приходит пустой ответ
-                    touch($this->getCacheFile(), time() + self::CACHE_EXTEND_TIME);
+                    // Change the modification time of the cache file if an empty response is received from the server
+                    \touch($this->getCacheFile(), time() + self::CACHE_EXTEND_TIME);
                 }
             }
         }
 
-        $result = file_get_contents($this->getCacheFile());
+        $result = \file_get_contents($this->getCacheFile());
 
         if ($result === false) {
-            $error = error_get_last();
+            $error = \error_get_last();
             throw new ClientCacheException($error['message']);
         }
 

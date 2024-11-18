@@ -1,139 +1,100 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Devmakis\ProdCalendar;
 
-use DateTime;
 use Devmakis\ProdCalendar\Exceptions\CalendarException;
-use Exception;
 
-/**
- * Class Month - месяц производственного календаря
- * @package Devmakis\ProdCalendar
- */
 class Month
 {
     /**
-     * @var string номер месяца
+     * @param array<Day> $nonWorkingDays
+     * @param array<PreHolidayDay> $preHolidayDays
      */
-    protected $numberM;
+    public function __construct(
+        protected int $numberM,
+        protected int $numberY,
+        protected array $nonWorkingDays,
+        protected array $preHolidayDays
+    ) {}
 
-    /**
-     * @var int номер года
-     */
-    protected $numberY;
-
-    /**
-     * @var Day[] нерабочие дни в месяце
-     */
-    protected $nonWorkingDays = [];
-
-    /**
-     * @var PreHolidayDay[] предпраздничные дни
-     */
-    protected $preHolidayDays = [];
-
-    /**
-     * Month constructor.
-     * @param string $numberM
-     * @param $numberY
-     * @param Day[] $nonWorkingDays
-     * @param PreHolidayDay[] $preHolidayDays
-     */
-    public function __construct($numberM, $numberY, array $nonWorkingDays, array $preHolidayDays)
-    {
-        if (strlen($numberM) == 1) {
-            $numberM = '0' . $numberM;
-        }
-
-        $this->numberM = (string)$numberM;
-        $this->numberY = (string)$numberY;
-        $this->nonWorkingDays = $nonWorkingDays;
-        $this->preHolidayDays = $preHolidayDays;
-    }
-
-    /**
-     * @return string
-     */
-    public function getNumberM()
+    public function getNumberM(): int
     {
         return $this->numberM;
     }
 
-    /**
-     * @return int
-     */
-    public function getNumberY()
+    public function getNumberY(): int
     {
         return $this->numberY;
     }
 
     /**
-     * @return Day[]
+     * @return array<Day>
      */
-    public function getNonWorkingDays()
+    public function getNonWorkingDays(): array
     {
         return $this->nonWorkingDays;
     }
 
     /**
-     * @return PreHolidayDay[]
+     * @return array<PreHolidayDay>
      */
-    public function getPreHolidayDays()
+    public function getPreHolidayDays(): array
     {
         return $this->preHolidayDays;
     }
 
+    public function getNonWorkingDay(int $dayNumber): ?Day
+    {
+        return $this->nonWorkingDays[$dayNumber] ?? null;
+    }
+
     /**
-     * Найти нерабочий день
-     * @param $d
-     * @return Day
      * @throws CalendarException
      */
-    public function findNonWorkingDay($d)
+    public function findNonWorkingDay(int $dayNumber): Day
     {
-        if (!isset($this->nonWorkingDays[$d])) {
-            throw new CalendarException("Day «{$d}» not found");
+        if (!isset($this->nonWorkingDays[$dayNumber])) {
+            throw new CalendarException('Day «' . $dayNumber . '» not found');
         }
 
-        return $this->nonWorkingDays[$d];
+        return $this->nonWorkingDays[$dayNumber];
+    }
+
+    public function getPreHolidayDay(int $dayNumber): ?PreHolidayDay
+    {
+        return $this->preHolidayDays[$dayNumber] ?? null;
     }
 
     /**
-     * Найти предпраздничный день
-     * @param $d
-     * @return Day
      * @throws CalendarException
      */
-    public function findPreHolidayDay($d)
+    public function findPreHolidayDay(int $dayNumber): PreHolidayDay
     {
-        $d = (int)$d;
-
-        if (strlen($d) == 1) $d = '0' . $d;
-
-        if (!isset($this->preHolidayDays[$d])) {
-            throw new CalendarException("Day «{$d}» not found");
+        if (!isset($this->preHolidayDays[$dayNumber])) {
+            throw new CalendarException('Day «' . $dayNumber . '» not found');
         }
 
-        return $this->preHolidayDays[$d];
+        return $this->preHolidayDays[$dayNumber];
+    }
+
+    public function countNonWorkingDays(): int
+    {
+        return \count($this->nonWorkingDays);
     }
 
     /**
-     * Подсчитать количество нерабочих дней в месяце
-     * @return int
+     * @throws \DateMalformedStringException
      */
-    public function countNonWorkingDays()
+    public function countWorkingDays(): int
     {
-        return count($this->nonWorkingDays);
+        $countDays = (int) (new \DateTime('01-' . $this->__toString()))->format('t');
+        return $countDays - \count($this->nonWorkingDays);
     }
 
-    /**
-     * Подсчитать количество рабочих дней в месяце
-     * @return int
-     * @throws Exception
-     */
-    public function countWorkingDays()
+    public function __toString(): string
     {
-        $countDays = (new DateTime("01-{$this->numberM}-{$this->numberY}"))->format('t');
-        return $countDays - count($this->nonWorkingDays);
+        return \str_pad((string) $this->numberM, 2, '0', STR_PAD_LEFT) . '-' . $this->numberY;
     }
 }

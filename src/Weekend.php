@@ -1,26 +1,18 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Devmakis\ProdCalendar;
 
-use Exception;
-
-/**
- * Class Weekend обычный выходной день (сб, вск)
- * @package Devmakis\ProdCalendar
- */
 class Weekend extends Day implements NonWorkingDay
 {
     /**
-     * Weekend constructor.
-     * @param $numberD
-     * @param $numberM
-     * @param $numberY
-     * @throws Exception
+     * @throws \DateMalformedStringException
      */
-    public function __construct($numberD, $numberM, $numberY)
+    public function __construct(int $numberD, int $numberM, int $numberY)
     {
         parent::__construct($numberD, $numberM, $numberY);
-        $nDayWeek = $this->getDateTime()->format('N');
-        $this->description = 'Выходной день (' . self::NAME_DAYS_RU[$nDayWeek] . ')';
+        $dayName = self::NAME_DAYS_RU[(int) (new \DateTime((string) $this))->format('N')];
+        $this->description = 'Выходной день (' . $dayName . ')';
     }
 }

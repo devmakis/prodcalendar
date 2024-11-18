@@ -1,267 +1,213 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Devmakis\ProdCalendar;
 
-use DateInterval;
-use DatePeriod;
-use DateTime;
-use DateTimeInterface;
-use Devmakis\ProdCalendar\Clients\Exceptions\ClientException;
-use Devmakis\ProdCalendar\Clients\DataGovClient;
+use Devmakis\ProdCalendar\Clients\ClientExceptionInterface;
 use Devmakis\ProdCalendar\Clients\IClient;
 use Devmakis\ProdCalendar\Exceptions\CalendarException;
-use Exception;
 
-/**
- * Class Calendar производственный календарь
- * @package Devmakis\ProdCalendar
- */
 class Calendar
 {
-    /**
-     * Формат года
-     */
-    const FORMAT_YEAR = 'Y';
+    public const string FORMAT_YEAR = 'Y';
 
-    /**
-     * Формат месяца
-     */
-    const FORMAT_MONTH = 'm';
+    public const string FORMAT_MONTH = 'm';
 
-    /**
-     * Формат дня
-     */
-    const FORMAT_DAY = 'd';
-
-    /**
-     * @var DataGovClient
-     */
-    private $client;
+    public const string FORMAT_DAY = 'd';
 
     /**
      * @var Year[]
      */
-    private $years = [];
+    protected array $years = [];
+
+    public function __construct(
+        protected IClient $client
+    ) {}
 
     /**
-     * Calendar constructor.
-     * @param IClient $client
+     * @throws ClientExceptionInterface
      */
-    public function __construct(IClient $client)
+    public function getYear(int $yearNumber): Year
     {
-        $this->client = $client;
-    }
-
-    /**
-     * @param $numberY
-     * @return Year
-     * @throws ClientException
-     */
-    public function getYear($numberY)
-    {
-        $numberY = (int)$numberY;
-
-        if (!isset($this->years[$numberY])) {
-            $this->years[$numberY] = $this->client->getYear($numberY);
+        if (!isset($this->years[$yearNumber])) {
+            $this->years[$yearNumber] = $this->client->getYear($yearNumber);
         }
 
-        return $this->years[$numberY];
+        return $this->years[$yearNumber];
     }
 
     /**
-     * Найти месяц из производственного календаря
-     * @param DateTimeInterface $date
-     * @return Month
-     * @throws CalendarException
-     * @throws ClientException
+     * @throws ClientExceptionInterface
      */
-    public function findMonth(DateTimeInterface $date)
+    public function getMonth(\DateTimeInterface $date): ?Month
     {
-        $y = $date->format(self::FORMAT_YEAR);
-        $m = $date->format(self::FORMAT_MONTH);
+        $yearNumber = (int) $date->format(self::FORMAT_YEAR);
+        $monthNumber = (int) $date->format(self::FORMAT_MONTH);
 
-        return $this->getYear($y)->getMonth($m);
+        return $this->getYear($yearNumber)->findMonth($monthNumber);
     }
 
     /**
-     * Найти день из производственного календаря (нерабочий или предпраздничный)
-     * @param DateTimeInterface $date
-     * @return Day|null
      * @throws CalendarException
-     * @throws ClientException
+     * @throws ClientExceptionInterface
      */
-    public function findDay(DateTimeInterface $date)
+    public function findMonth(\DateTimeInterface $date): ?Month
+    {
+        $yearNumber = (int) $date->format(self::FORMAT_YEAR);
+        $monthNumber = (int) $date->format(self::FORMAT_MONTH);
+
+        return $this->getYear($yearNumber)->getMonth($monthNumber);
+    }
+
+    /**
+     * @throws ClientExceptionInterface
+     */
+    public function getDay(\DateTimeInterface $date): ?Day
+    {
+        $month = $this->getMonth($date);
+        $dayNumber = (int) $date->format(self::FORMAT_DAY);
+
+        return $month->getNonWorkingDay($dayNumber) ?? $month->getPreHolidayDay($dayNumber);
+    }
+
+    /**
+     * @throws CalendarException
+     * @throws ClientExceptionInterface
+     */
+    public function findDay(\DateTimeInterface $date): Day
     {
         $month = $this->findMonth($date);
-        $d = $date->format(self::FORMAT_DAY);
+        $dayNumber = (int) $date->format(self::FORMAT_DAY);
 
         try {
-            $day = $month->findNonWorkingDay($d);
+            $day = $month->findNonWorkingDay($dayNumber);
         } catch (CalendarException $e) {
-            $day = $month->findPreHolidayDay($d);
+            $day = $month->findPreHolidayDay($dayNumber);
         }
 
         return $day;
     }
 
     /**
-     * Проверить является ли день праздничным
-     * @param DateTimeInterface $date
-     * @return bool
-     * @throws ClientException
+     * @throws ClientExceptionInterface
      */
-    public function isHoliday(DateTimeInterface $date)
+    public function isHoliday(\DateTimeInterface $date): bool
     {
-        try {
-            return $this->findDay($date) instanceof Holiday;
-        } catch (CalendarException $e) {
-            return false;
-        }
+        return $this->getDay($date) instanceof Holiday;
     }
 
     /**
-     * Проверить является ли день предпраздничным
-     * @param DateTimeInterface $date
-     * @return bool
-     * @throws ClientException
+     * @throws ClientExceptionInterface
      */
-    public function isPreHoliday(DateTimeInterface $date)
+    public function isPreHoliday(\DateTimeInterface $date): bool
     {
-        try {
-            return $this->findDay($date) instanceof PreHolidayDay;
-        } catch (CalendarException $e) {
-            return false;
-        }
+        return $this->getDay($date) instanceof PreHolidayDay;
     }
 
     /**
-     * Проверить является ли день выходным
-     * @param DateTimeInterface $date
-     * @return bool
-     * @throws ClientException
+     * @throws ClientExceptionInterface
      */
-    public function isWeekend(DateTimeInterface $date)
+    public function isWeekend(\DateTimeInterface $date): bool
     {
-        try {
-            return $this->findDay($date) instanceof Weekend;
-        } catch (CalendarException $e) {
-            return false;
-        }
+        return $this->getDay($date) instanceof Weekend;
     }
 
     /**
-     * Проверить является ли день перенесенным праздником
-     * @param DateTimeInterface $date
-     * @return bool
-     * @throws ClientException
+     * @throws ClientExceptionInterface
      */
-    public function isTransferredHoliday(DateTimeInterface $date)
+    public function isTransferredHoliday(\DateTimeInterface $date): bool
     {
-        try {
-            return $this->findDay($date) instanceof TransferredHoliday;
-        } catch (CalendarException $e) {
-            return false;
-        }
+        return $this->getDay($date) instanceof TransferredHoliday;
     }
 
     /**
-     * Проверить является ли день нерабочим
-     * @param DateTimeInterface $date
-     * @return bool
-     * @throws ClientException
+     * @throws ClientExceptionInterface
      */
-    public function isNonWorking(DateTimeInterface $date)
+    public function isNonWorking(\DateTimeInterface $date): bool
     {
-        try {
-            return $this->findDay($date) instanceof NonWorkingDay;
-        } catch (CalendarException $e) {
-            return false;
-        }
+        return $this->getDay($date) instanceof NonWorkingDay;
     }
 
     /**
-     * Подсчитать количество рабочих дней за период
-     * @param DateTimeInterface $begin начальная дата периода
-     * @param DateTimeInterface $end конечная дата периода
-     * @param bool $excludeBegin не учитывать начальную дату
-     * @param bool $excludeEnd не учитывать конечную дату
-     * @return int количество рабочих дней за период
      * @throws CalendarException
-     * @throws ClientException
-     * @throws Exception
+     * @throws ClientExceptionInterface
+     * @throws \DateMalformedPeriodStringException
+     * @throws \Exception
      */
     public function countWorkingDaysForPeriod(
-        DateTimeInterface $begin,
-        DateTimeInterface $end,
-        $excludeBegin = false,
-        $excludeEnd = false
-    ) {
+        \DateTimeInterface $begin,
+        \DateTimeInterface $end,
+        bool $excludeBegin = false,
+        bool $excludeEnd = false
+    ): int {
         $count = 0;
         $begin = clone $begin;
-        $begin->setTime(0, 0, 0);
+        $begin->setTime(0, 0);
         $end = clone $end;
-        $excludeEnd ? $end->setTime(0, 0, 0) : $end->setTime(23, 59, 59);
+        $excludeEnd ? $end->setTime(0, 0) : $end->setTime(23, 59, 59);
 
         if ($begin >= $end) {
-            throw new ClientException('Invalid time period');
+            throw new CalendarException('Invalid time period');
         }
 
-        $monthBegin = $this->findMonth($begin);
-        $monthEnd = $this->findMonth($end);
+        $monthBegin = $this->getMonth($begin);
+
+        if (!$monthBegin) {
+            throw new CalendarException('Month not found in production calendar by begin date ' . $begin->format('Y-m-d'));
+        }
+
+        $monthEnd = $this->getMonth($end);
+
+        if (!$monthEnd) {
+            throw new CalendarException('Month not found in production calendar by end date ' . $end->format('Y-m-d'));
+        }
 
         $beginM = clone $begin;
-        // Начало периода сбрасываем на начало месяца чтобы интервал в 1 месяц не пропустил какой-либо месяц
         $beginM->modify('first day of this month');
-        $intervalM = DateInterval::createFromDateString('1 month');
-        $periodM = new DatePeriod($beginM, $intervalM, $end);
+        $intervalM = \DateInterval::createFromDateString('1 month');
+        $periodM = new \DatePeriod($beginM, $intervalM, $end);
 
         foreach ($periodM as $dateM) {
-            $month = $this->findMonth($dateM);
+            $month = $this->getMonth($dateM);
 
-            // Если первый месяц из периода
+            if (!$month) {
+                throw new CalendarException('Month not found in production calendar by date ' . $dateM->format('Y-m-d'));
+            }
+
             if ($month->getNumberY() == $monthBegin->getNumberY() &&
                 $month->getNumberM() == $monthBegin->getNumberM()
             ) {
-                // Если начало и конец периода это день из одного и того же месяца и года
                 if ($monthBegin->getNumberY() == $monthEnd->getNumberY() &&
                     $monthBegin->getNumberM() == $monthEnd->getNumberM()
                 ) {
                     $endD = $end;
                 } else {
                     $endD = clone $dateM;
-                    // Устанавливаем конец периода последним днем месяца
                     $endD->modify('last day of this month')->setTime(23, 59, 59);
                 }
 
-                $intervalD = DateInterval::createFromDateString('1 day');
-                $periodD = new DatePeriod($begin, $intervalD, $endD, (int)$excludeBegin);
+                $intervalD = \DateInterval::createFromDateString('1 day');
+                $periodD = new \DatePeriod($begin, $intervalD, $endD, (int)$excludeBegin);
 
                 foreach ($periodD as $dateD) {
-                    try {
-                        $month->findNonWorkingDay($dateD->format(self::FORMAT_DAY));
-                    } catch (CalendarException $e) {
+                    if (!$month->getNonWorkingDay((int) $dateD->format(self::FORMAT_DAY))) {
                         $count++;
                     }
                 }
-                // Если последний месяц из периода
             } elseif ($month->getNumberY() == $monthEnd->getNumberY() &&
                 $month->getNumberM() == $monthEnd->getNumberM()
             ) {
                 $beginD = clone $dateM;
-                // Т.к. это последний месяц периода, то отсчет начинаем с первого дня месяца
                 $beginD->modify('first day of this month');
-
-                $intervalD = DateInterval::createFromDateString('1 day');
-                $periodD = new DatePeriod($beginD, $intervalD, $end);
+                $intervalD = \DateInterval::createFromDateString('1 day');
+                $periodD = new \DatePeriod($beginD, $intervalD, $end);
 
                 foreach ($periodD as $dateD) {
-                    try {
-                        $month->findNonWorkingDay($dateD->format(self::FORMAT_DAY));
-                    } catch (CalendarException $e) {
+                    if (!$month->getNonWorkingDay($dateD->format(self::FORMAT_DAY))) {
                         $count++;
                     }
                 }
-                // Промежуточные месяцы (полные)
             } else {
                 $count += $month->countWorkingDays();
             }
@@ -271,91 +217,84 @@ class Calendar
     }
 
     /**
-     * Подсчитать количество нерабочих дней за период
-     * @param DateTimeInterface $begin начальная дата периода
-     * @param DateTimeInterface $end конечная дата периода
-     * @param bool $excludeBegin не учитывать начальную дату
-     * @param bool $excludeEnd не учитывать конечную дату
-     * @return int количество рабочих дней за период
      * @throws CalendarException
-     * @throws ClientException
+     * @throws ClientExceptionInterface
+     * @throws \DateMalformedPeriodStringException
      */
     public function countNonWorkingDaysForPeriod(
-        DateTimeInterface $begin,
-        DateTimeInterface $end,
-        $excludeBegin = false,
-        $excludeEnd = false
-    ) {
+        \DateTimeInterface $begin,
+        \DateTimeInterface $end,
+        bool $excludeBegin = false,
+        bool $excludeEnd = false
+    ): int {
         $count = 0;
-        $begin = clone $begin;
-        $begin->setTime(0, 0, 0);
+        $begin = (clone $begin)->setTime(0, 0);
         $end = clone $end;
-        $excludeEnd ? $end->setTime(0, 0, 0) : $end->setTime(23, 59, 59);
+        $excludeEnd ? $end->setTime(0, 0) : $end->setTime(23, 59, 59);
 
         if ($begin >= $end) {
-            throw new ClientException('Invalid time period');
+            throw new CalendarException('Invalid time period');
         }
 
-        $monthBegin = $this->findMonth($begin);
-        $monthEnd = $this->findMonth($end);
+        $monthBegin = $this->getMonth($begin);
+
+        if (!$monthBegin) {
+            throw new CalendarException('Month not found in production calendar by begin date ' . $begin->format('Y-m-d'));
+        }
+
+        $monthEnd = $this->getMonth($end);
+
+        if (!$monthEnd) {
+            throw new CalendarException('Month not found in production calendar by end date ' . $end->format('Y-m-d'));
+        }
 
         $beginM = clone $begin;
-        // Начало периода сбрасываем на начало месяца чтобы интервал в 1 месяц не пропустил какой-либо месяц
         $beginM->modify('first day of this month');
-        $intervalM = DateInterval::createFromDateString('1 month');
-        $periodM = new DatePeriod($beginM, $intervalM, $end);
+        $intervalM = \DateInterval::createFromDateString('1 month');
+        $periodM = new \DatePeriod($beginM, $intervalM, $end);
 
         foreach ($periodM as $dateM) {
-            $month = $this->findMonth($dateM);
+            $month = $this->getMonth($dateM);
 
-            // Если первый месяц из периода
+            if (!$month) {
+                throw new CalendarException('Month not found in production calendar by begin date ' . $dateM->format('Y-m-d'));
+            }
+
             if ($month->getNumberY() == $monthBegin->getNumberY() &&
                 $month->getNumberM() == $monthBegin->getNumberM()
             ) {
-                // Если начало и конец периода это день из одного и того же месяца и года
                 if ($monthBegin->getNumberY() == $monthEnd->getNumberY() &&
                     $monthBegin->getNumberM() == $monthEnd->getNumberM()
                 ) {
                     $endD = $end;
                 } else {
                     $endD = clone $dateM;
-                    // Устанавливаем конец периода последним днем месяца
                     $endD->modify('last day of this month')->setTime(23, 59, 59);
                 }
 
-                $intervalD = DateInterval::createFromDateString('1 day');
-                $periodD = new DatePeriod($begin, $intervalD, $endD, (int)$excludeBegin);
+                $intervalD = \DateInterval::createFromDateString('1 day');
+                $periodD = new \DatePeriod($begin, $intervalD, $endD, (int)$excludeBegin);
 
                 foreach ($periodD as $dateD) {
-                    try {
-                        $month->findNonWorkingDay($dateD->format(self::FORMAT_DAY));
+                    if ($month->getNonWorkingDay((int) $dateD->format(self::FORMAT_DAY))) {
                         $count++;
-                    } catch (CalendarException $e) {
-                        continue;
                     }
                 }
-                // Если последний месяц из периода
             } elseif ($month->getNumberY() == $monthEnd->getNumberY() &&
                 $month->getNumberM() == $monthEnd->getNumberM()
             ) {
                 $beginD = clone $dateM;
-                // Т.к. это последний месяц периода, то отсчет начинаем с первого дня месяца
                 $beginD->modify('first day of this month');
-
-                $intervalD = DateInterval::createFromDateString('1 day');
-                $periodD = new DatePeriod($beginD, $intervalD, $end);
+                $intervalD = \DateInterval::createFromDateString('1 day');
+                $periodD = new \DatePeriod($beginD, $intervalD, $end);
 
                 foreach ($periodD as $dateD) {
-                    try {
-                        $month->findNonWorkingDay($dateD->format(self::FORMAT_DAY));
+                    if ($month->getNonWorkingDay((int) $dateD->format(self::FORMAT_DAY))) {
                         $count++;
-                    } catch (CalendarException $e) {
-                        continue;
                     }
                 }
-                // Промежуточные месяцы (полные)
             } else {
-                $count += $month->countNonWorkingDays();
+                $count += \count($month->getNonWorkingDays());
             }
         }
 
@@ -363,19 +302,15 @@ class Calendar
     }
 
     /**
-     * Найти ближайшую рабочую дату (включая сегодняшнюю)
-     * @param DateTimeInterface|null $date
-     * @return DateTime
-     * @throws ClientException
+     * Find the nearest working date (including today's)
+     * @throws ClientExceptionInterface
      */
-    public function nearestWorkingDate(DateTimeInterface $date = null)
+    public function nearestWorkingDate(?\DateTimeInterface $date = null): \DateTimeInterface
     {
-        if ($date === null) {
-            $date = (new DateTime());
-        }
+        $date = $date ?? new \DateTime();
 
         while ($this->isNonWorking($date)) {
-            $interval = DateInterval::createfromdatestring('+1 day');
+            $interval = \DateInterval::createFromDateString('+1 day');
             $date->add($interval);
         }
 

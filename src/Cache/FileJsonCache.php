@@ -5,6 +5,9 @@ namespace Devmakis\ProdCalendar\Cache;
 use Devmakis\ProdCalendar\Cache\Exception\CacheException;
 use Devmakis\ProdCalendar\Cache\Exception\CacheExpiredException;
 
+/**
+ * @deprecated
+ */
 class FileJsonCache implements ICachable
 {
     /**

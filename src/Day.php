@@ -1,20 +1,12 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Devmakis\ProdCalendar;
 
-use DateTime;
-use Exception;
-
-/**
- * Class Day - день производственного календаря
- * @package Devmakis\ProdCalendar
- */
 class Day
 {
-    /**
-     * Название дней недели
-     */
-    const NAME_DAYS_RU = [
+    public const array NAME_DAYS_RU = [
         1 => 'Понедельник',
         2 => 'Вторник',
         3 => 'Среда',
@@ -24,99 +16,51 @@ class Day
         7 => 'Воскресенье',
     ];
 
-    /**
-     * @var string номер дня
-     */
-    protected $numberD;
+    protected ?string $description;
 
-    /**
-     * @var string номер месяца
-     */
-    protected $numberM;
+    public function __construct(
+        protected int $numberD,
+        protected int $numberM,
+        protected int $numberY
+    ) {}
 
-    /**
-     * @var int номер года
-     */
-    protected $numberY;
-
-    /**
-     * @var string описание дня
-     */
-    protected $description;
-
-    /**
-     * Day constructor.
-     * @param string $numberD
-     * @param $numberM
-     * @param $numberY
-     */
-    public function __construct($numberD, $numberM, $numberY)
-    {
-        // Удаляем все, что не цифры
-        $numberD = preg_replace('~\D+~','', $numberD);
-        $numberM = preg_replace('~\D+~','', $numberM);
-        $numberY = preg_replace('~\D+~','', $numberY);
-
-        if (strlen($numberD) == 1) {
-            $numberD = '0' . $numberD;
-        }
-
-        if (strlen($numberM) == 1) {
-            $numberM = '0' . $numberM;
-        }
-
-        $this->numberD = (string)$numberD;
-        $this->numberM = (string)$numberM;
-        $this->numberY = (string)$numberY;
-    }
-
-    /**
-     * @return string
-     */
-    public function getNumberD()
+    public function getNumberD(): int
     {
         return $this->numberD;
     }
 
-    /**
-     * @return string
-     */
-    public function getNumberM()
+    public function getNumberM(): int
     {
         return $this->numberM;
     }
 
-    /**
-     * @return int
-     */
-    public function getNumberY()
+    public function getNumberY(): int
     {
         return $this->numberY;
     }
 
-    /**
-     * @return string
-     */
-    public function getDescription()
+    public function getDescription(): ?string
     {
         return $this->description;
     }
 
-    /**
-     * @param string $description
-     */
-    public function setDescription($description)
+    public function setDescription(?string $description): void
     {
         $this->description = $description;
     }
 
     /**
-     * Получить объект DateTime
-     * @return DateTime
-     * @throws Exception
+     * @throws \DateMalformedStringException
      */
-    public function getDateTime()
+    public function getDateTime(): \DateTime
     {
-        return new DateTime("{$this->numberD}-{$this->numberM}-{$this->numberY}");
+        return new \DateTime($this->__toString());
+    }
+
+    public function __toString(): string
+    {
+        return $this->numberY . '-' .
+            \str_pad((string)$this->numberM, 2, '0', STR_PAD_LEFT) . '-' .
+            \str_pad((string)$this->numberD, 2, '0', STR_PAD_LEFT);
     }
 }

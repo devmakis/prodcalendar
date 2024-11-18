@@ -1,13 +1,9 @@
 <?php
-/**
- * Клиент для получения данных производственных календарей (от http://xmlcalendar.ru)
- */
+
+declare(strict_types=1);
 
 namespace Devmakis\ProdCalendar\Clients;
 
-use Devmakis\ProdCalendar\Cache\Exception\CacheException;
-use Devmakis\ProdCalendar\Cache\ICachable;
-use Devmakis\ProdCalendar\Clients\Exceptions\ClientCurlException;
 use Devmakis\ProdCalendar\Clients\Exceptions\ClientException;
 use Devmakis\ProdCalendar\Day;
 use Devmakis\ProdCalendar\Holiday;
@@ -17,147 +13,132 @@ use Devmakis\ProdCalendar\PreHolidayDay;
 use Devmakis\ProdCalendar\TransferredHoliday;
 use Devmakis\ProdCalendar\Weekend;
 use Devmakis\ProdCalendar\Year;
+use GuzzleHttp\Psr7\Request;
+use Psr\Http\Client\ClientExceptionInterface;
+use Psr\Http\Client\ClientInterface;
+use Psr\SimpleCache\CacheInterface;
+use Psr\SimpleCache\InvalidArgumentException;
 
 class XmlCalendarClient implements IClient
 {
     use Holidays;
 
-    /**
-     * Разделитель дней в данных API сервиса
-     */
-    const API_DELIMITER_DAYS = ',';
+    protected const string BASE_URI = 'https://xmlcalendar.github.io';
 
-    /**
-     * Метка предпраздничного дня в данных API сервиса
-     */
-    const API_LABEL_PRE_HOLIDAY = '*';
+    public const string API_DELIMITER_DAYS = ',';
 
-    /**
-     * Метка перенесенного праздника в данных API сервиса
-     */
-    const API_LABEL_TRANSFERRED_HOLIDAY = '+';
+    public const string API_LABEL_PRE_HOLIDAY = '*';
 
-    /**
-     * @var array
-     */
-    protected $data = [];
-    /**
-     * @var string
-     */
-    private $country;
-    /**
-     * @var ICachable|null
-     */
-    protected $cache;
-    /**
-     * @var Curl|null
-     */
-    private $curl;
+    public const string API_LABEL_TRANSFERRED_HOLIDAY = '+';
 
-    public function __construct($country, ICachable $cache = null, Curl $curl = null)
+    protected array $data = [];
+
+    protected null|int|\DateInterval $cacheTtl = null;
+
+    public function __construct(
+        protected string $country,
+        protected ClientInterface $httpClient,
+        protected ?CacheInterface $cache = null,
+    ) {}
+
+    public function setCacheTtl(null|int|\DateInterval $cacheTtl): void
     {
-        $this->country = $country;
-        $this->cache = $cache;
-        $this->curl = $curl ?: new Curl();
+        $this->cacheTtl = $cacheTtl;
     }
 
     /**
-     * @param $numberY
-     * @return Year
-     * @throws ClientException|CacheException
+     * @throws InvalidArgumentException
+     * @throws ClientExceptionInterface
      * @throws \Exception
      */
-    public function getYear($numberY)
+    public function getYear(int $yearNumber): Year
     {
-        if (!isset($this->data[$this->country][$numberY])) {
-            try {
-                $this->data = $this->cache->read();
-            } catch (CacheException $e) {
+        if (!isset($this->data[$yearNumber])) {
+            if ($this->cache) {
+                $this->data[$yearNumber] = $this->cache->get((string) $yearNumber);
             }
 
-            if (!isset($this->data[$this->country][$numberY])) {
-                try {
-                    $contents = $this->curl->request(sprintf(
-                        'http://xmlcalendar.ru/data/%s/%s/calendar.json',
-                        $this->country,
-                        $numberY
-                    ));
-                    $this->data[$this->country][$numberY] = \json_decode($contents, true);
-                    $this->cache->write($this->data);
-                } catch (ClientCurlException $e) {
-                    $this->data = $this->cache->extend();
-                }
+            if (!isset($this->data[$yearNumber])) {
+                $uri = \sprintf('%s/data/%s/%d/calendar.json', self::BASE_URI, $this->country, $yearNumber);
+                $request = new Request('GET', $uri);
+                $response = $this->httpClient->sendRequest($request);
+                $this->data[$yearNumber] = \json_decode($response->getBody()->getContents(), true);
+                $this->cache?->set((string) $yearNumber, $this->data[$yearNumber], $this->cacheTtl);
             }
         }
 
-        if (!isset($this->data[$this->country][$numberY])) {
-            throw new ClientException('Year not found');
+        if (!isset($this->data[$yearNumber])) {
+            throw new ClientException($yearNumber . ' year not found');
         }
 
         $months = [];
 
-        foreach ($this->data[$this->country][$numberY]['months'] as $monthData) {
-            $numberM = $monthData['month'];
-            $days = explode(self::API_DELIMITER_DAYS, $monthData['days']);
+        foreach ($this->data[$yearNumber]['months'] as $monthData) {
+            $monthNumber = (int) $monthData['month'];
+            $days = \explode(self::API_DELIMITER_DAYS, $monthData['days'] ?? []);
             $nonWorkingDays = [];
             $preHolidayDays = [];
 
-            foreach ($days as $numberD) {
-                // Определение предпраздничного дня по метке от АПИ
-                if (strpos($numberD, self::API_LABEL_PRE_HOLIDAY) !== false) {
-                    $numberD = str_replace(self::API_LABEL_PRE_HOLIDAY, '', $numberD);
-                    $preHolidayDay = new PreHolidayDay($numberD, $numberM, $numberY);
+            foreach ($days as $dayNumber) {
+                if (\str_contains($dayNumber, self::API_LABEL_PRE_HOLIDAY)) {
+                    $dayNumber = \str_replace(self::API_LABEL_PRE_HOLIDAY, '', $dayNumber);
+                    $preHolidayDay = new PreHolidayDay((int) $dayNumber, $monthNumber, $yearNumber);
                     $preHolidayDays[$preHolidayDay->getNumberD()] = $preHolidayDay;
 
                     continue;
                 }
 
-                // Определение перенесенного праздника по метке от АПИ
-                if (strpos($numberD, self::API_LABEL_TRANSFERRED_HOLIDAY) !== false) {
-                    $numberD = str_replace(self::API_LABEL_TRANSFERRED_HOLIDAY, '', $numberD);
-                    $nonWorkingDay = new TransferredHoliday($numberD, $numberM, $numberY);
+                if (\str_contains($dayNumber, self::API_LABEL_TRANSFERRED_HOLIDAY)) {
+                    $dayNumber = \str_replace(self::API_LABEL_TRANSFERRED_HOLIDAY, '', $dayNumber);
+                    $nonWorkingDay = new TransferredHoliday((int) $dayNumber, $monthNumber, $yearNumber);
                     $nonWorkingDays[$nonWorkingDay->getNumberD()] = $nonWorkingDay;
 
                     continue;
                 }
 
-                // Определение праздничного
-                $nonWorkingDay = new Day($numberD, $numberM, $numberY);
+                $nonWorkingDay = new Day((int) $dayNumber, $monthNumber, $yearNumber);
                 $keyHoliday = $nonWorkingDay->getNumberD() . '.' . $nonWorkingDay->getNumberM();
                 $nonworkingHolidays = $this->getNonworkingHolidays();
 
-                if (array_key_exists($keyHoliday, $nonworkingHolidays)) {
-                    $nonWorkingDay = new Holiday($numberD, $numberM, $numberY);
+                if (\array_key_exists($keyHoliday, $nonworkingHolidays)) {
+                    $nonWorkingDay = new Holiday((int) $dayNumber, $monthNumber, $yearNumber);
                     $nonWorkingDay->setDescription($nonworkingHolidays[$keyHoliday]);
                     $nonWorkingDays[$nonWorkingDay->getNumberD()] = $nonWorkingDay;
 
                     continue;
                 }
 
-                // Определение перенесенного праздника, если нет меки от АПИ (это не сб и не вск)
-                $nDayWeek = $nonWorkingDay->getDateTime()->format('N');
+                $dayWeekNumber = (new \DateTime((string) $nonWorkingDay))->format('N');
 
-                if (!in_array($nDayWeek, [6, 7])) {
-                    $nonWorkingDay = new TransferredHoliday($numberD, $numberM, $numberY);
+                if (!\in_array($dayWeekNumber, [6, 7])) {
+                    $nonWorkingDay = new TransferredHoliday((int) $dayNumber, $monthNumber, $yearNumber);
                     $nonWorkingDays[$nonWorkingDay->getNumberD()] = $nonWorkingDay;
 
                     continue;
                 }
 
-                // Если не все что выше, значит это обычный выходной день
-                $nonWorkingDay = new Weekend($numberD, $numberM, $numberY);
+                $nonWorkingDay = new Weekend((int) $dayNumber, $monthNumber, $yearNumber);
                 $nonWorkingDays[$nonWorkingDay->getNumberD()] = $nonWorkingDay;
             }
 
-            $month = new Month($numberM, $numberY, $nonWorkingDays, $preHolidayDays);
+            $month = new Month($monthNumber, $yearNumber, $nonWorkingDays, $preHolidayDays);
             $months[$month->getNumberM()] = $month;
         }
 
-        $calendar = new Year($numberY, $months);
-        $calendar->setNumWorkingHours40($this->data[$this->country][$numberY]['statistic']['hours40']);
-        $calendar->setNumWorkingHours36($this->data[$this->country][$numberY]['statistic']['hours36']);
-        $calendar->setNumWorkingHours24($this->data[$this->country][$numberY]['statistic']['hours24']);
+        $year = new Year($yearNumber, $months);
 
-        return $calendar;
+        if (isset($this->data[$yearNumber]['statistic']['hours40'])) {
+            $year->setNumberWorkingHours40((float) $this->data[$yearNumber]['statistic']['hours40']);
+        }
+
+        if (isset($this->data[$yearNumber]['statistic']['hours36'])) {
+            $year->setNumberWorkingHours36((float) $this->data[$yearNumber]['statistic']['hours36']);
+        }
+
+        if (isset($this->data[$yearNumber]['statistic']['hours24'])) {
+            $year->setNumberWorkingHours24((float) $this->data[$yearNumber]['statistic']['hours24']);
+        }
+
+        return $year;
     }
 }

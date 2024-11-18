@@ -1,188 +1,206 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Devmakis\ProdCalendar;
 
-use DateTime;
 use Devmakis\ProdCalendar\Exceptions\CalendarException;
-use Exception;
 
-/**
- * Class Year год производственного календаря
- * @package Devmakis\ProdCalendar
- */
 class Year
 {
     /**
-     * @var string номер года
+     * Number of working hours with a 40-hour work week
      */
-    protected $numberY;
+    protected ?float $numberWorkingHours40 = null;
 
     /**
-     * @var Month[] массив объектов месяцев
+     * Number of working hours with a 40-hour work week
      */
-    protected $months = [];
+    protected ?float $numberWorkingHours36 = null;
 
     /**
-     * @var int|null всего рабочих дней в году
+     * Number of working hours in a 24-hour work week
      */
-    protected $totalWorkingDays;
+    protected ?float $numberWorkingHours24 = null;
 
     /**
-     * @var int|null всего праздничных и выходных дней в году
+     * Number of working hours with a 40-hour work week
+     * @deprecated
+     * @see Year::$numberWorkingHours40
      */
-    protected $totalNonworkingDays;
+    protected int $numWorkingHours40;
 
     /**
-     * @var int количество рабочих часов при 40-часовой рабочей неделе
+     * Number of working hours with a 36-hour work week
+     * @deprecated
+     * @see Year::$numberWorkingHours36
      */
-    protected $numWorkingHours40;
+    protected int $numWorkingHours36;
 
     /**
-     * @var int количество рабочих часов при 36-часовой рабочей неделе
+     * Number of working hours in a 24-hour work week
+     * @deprecated
+     * @see Year::$numberWorkingHours24
      */
-    protected $numWorkingHours36;
+    protected int $numWorkingHours24;
 
     /**
-     * @var int количество рабочих часов при 24-часовой рабочей неделе
+     * @param array<int, Month> $months
      */
-    protected $numWorkingHours24;
+    public function __construct(
+        protected int $numberY,
+        protected array $months
+    ) {}
 
-    /**
-     * Year constructor.
-     * @param string $number номер года
-     * @param array $months
-     */
-    public function __construct($number, array $months)
-    {
-        $this->numberY = (string)$number;
-        $this->months = $months;
-    }
-
-    /**
-     * @return string
-     */
-    public function getNumberY()
+    public function getNumberY(): int
     {
         return $this->numberY;
     }
 
     /**
-     * @return Month[]
+     * @return array<Month>
      */
-    public function getMonths()
+    public function getMonths(): array
     {
         return $this->months;
     }
 
+    public function getNumberWorkingHours40(): ?float
+    {
+        return $this->numberWorkingHours40;
+    }
+
+    public function setNumberWorkingHours40(float $numberWorkingHours40): void
+    {
+        $this->numberWorkingHours40 = $numberWorkingHours40;
+    }
+
+    public function getNumberWorkingHours36(): ?float
+    {
+        return $this->numberWorkingHours36;
+    }
+
+    public function setNumberWorkingHours36(float $numberWorkingHours36): void
+    {
+        $this->numberWorkingHours36 = $numberWorkingHours36;
+    }
+
+    public function getNumberWorkingHours24(): ?float
+    {
+        return $this->numberWorkingHours24;
+    }
+
+    public function setNumberWorkingHours24(float $numberWorkingHours24): void
+    {
+        $this->numberWorkingHours24 = $numberWorkingHours24;
+    }
+
     /**
-     * @return int
+     * @deprecated
+     * @see Year::getNumberWorkingHours40
      */
-    public function getNumWorkingHours40()
+    public function getNumWorkingHours40(): int
     {
         return $this->numWorkingHours40;
     }
 
     /**
-     * @return int
+     * @deprecated
+     * @see Year::getNumberWorkingHours36
      */
-    public function getNumWorkingHours36()
+    public function getNumWorkingHours36(): int
     {
         return $this->numWorkingHours36;
     }
 
     /**
-     * @return int
+     * @deprecated
+     * @see Year::getNumberWorkingHours24
      */
-    public function getNumWorkingHours24()
+    public function getNumWorkingHours24(): int
     {
         return $this->numWorkingHours24;
     }
 
     /**
-     * @param int $numWorkingHours40
+     * @deprecated
+     * @see Year::setNumberWorkingHours40
      */
-    public function setNumWorkingHours40($numWorkingHours40)
+    public function setNumWorkingHours40(int $numWorkingHours40): void
     {
-        $this->numWorkingHours40 = (int)$numWorkingHours40;
+        $this->numWorkingHours40 = $numWorkingHours40;
     }
 
     /**
-     * @param int $numWorkingHours36
+     * @deprecated
+     * @see Year::setNumberWorkingHours36
      */
-    public function setNumWorkingHours36($numWorkingHours36)
+    public function setNumWorkingHours36(int $numWorkingHours36): void
     {
-        $this->numWorkingHours36 = (int)$numWorkingHours36;
+        $this->numWorkingHours36 = $numWorkingHours36;
     }
 
     /**
-     * @param int $numWorkingHours24
+     * @deprecated
+     * @see Year::setNumberWorkingHours24
      */
-    public function setNumWorkingHours24($numWorkingHours24)
+    public function setNumWorkingHours24(int $numWorkingHours24): void
     {
-        $this->numWorkingHours24 = (int)$numWorkingHours24;
+        $this->numWorkingHours24 = $numWorkingHours24;
     }
 
+    public function findMonth(int $monthNumber): ?Month
+    {
+        return $this->months[$monthNumber] ?? null;
+    }
 
     /**
-     * Получить месяц
-     * @param string $m
-     * @return Month
      * @throws CalendarException
      */
-    public function getMonth($m)
+    public function getMonth(int $monthNumber): Month
     {
-        if (!isset($this->months[$m])) {
-            throw new CalendarException("Month «{$m}» not found in production calendar");
+        if (!isset($this->months[$monthNumber])) {
+            throw new CalendarException('Month «' . $monthNumber . '» not found in production calendar');
         }
 
-        return $this->months[$m];
+        return $this->months[$monthNumber];
     }
 
-    /**
-     * Подсчитать количество нерабочих дней в году
-     * @return int
-     */
-    public function countNonWorkingDays()
+    public function countNonWorkingDays(): ?int
     {
-        if ($this->totalNonworkingDays !== null) {
-            return $this->totalNonworkingDays;
-        }
-
-        $this->totalNonworkingDays = 0;
+        $totalNonworkingDays = 0;
 
         foreach ($this->months as $month) {
-            $this->totalNonworkingDays += $month->countNonWorkingDays();
+            $totalNonworkingDays += \count($month->getNonWorkingDays());
         }
 
-        return $this->totalNonworkingDays;
+        return $totalNonworkingDays;
     }
 
     /**
-     * Подсчитать количество рабочих дней в году
-     * @return int
-     * @throws Exception
+     * @throws \DateMalformedStringException
      */
-    public function countWorkingDays()
+    public function countWorkingDays(): int
     {
-        if ($this->totalWorkingDays !== null) {
-            return $this->totalWorkingDays;
-        }
-
-        $this->totalWorkingDays = 0;
+        $totalWorkingDays = 0;
 
         foreach ($this->months as $month) {
-            $this->totalWorkingDays += $month->countWorkingDays();
+            $totalWorkingDays += $month->countWorkingDays();
         }
 
-        return $this->totalWorkingDays;
+        return $totalWorkingDays;
     }
 
     /**
-     * Подсчитать количество календарных дней в году
-     * @return int|string
+     * @throws \DateMalformedStringException
      */
-    public function countCalendarDays()
+    public function countCalendarDays(): int
     {
-        return (int)(new DateTime("31-12-{$this->numberY}"))->format('z') + 1;
+        return (int) (new \DateTime('31-12-' . $this->numberY))->format('z') + 1;
+    }
+
+    public function __toString(): string
+    {
+        return (string) $this->numberY;
     }
 }

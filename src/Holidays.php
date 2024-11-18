@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Devmakis\ProdCalendar;
 
 trait Holidays
@@ -9,7 +11,7 @@ trait Holidays
      * согласно Статье 112 "Трудовой кодекс Российской Федерации" от 30.12.2001 N 197-ФЗ (ред. от 05.02.2018)
      * @link https://www.consultant.ru/document/cons_doc_LAW_34683/98ef2900507766e70ff29c0b9d8e2353ea80a1cf/#dst102376
      */
-    public function getNonworkingHolidays()
+    public function getNonworkingHolidays(): array
     {
         return [
             '01.01' => 'Новогодние каникулы',

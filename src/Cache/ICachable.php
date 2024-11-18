@@ -7,6 +7,7 @@ use Devmakis\ProdCalendar\Cache\Exception\CacheException;
 /**
  * Interface IClientCacheFile интерфейс для реализации кэша в клиенте
  * @package Devmakis\ProdCalendar\Clients
+ * @deprecated
  */
 interface ICachable
 {
