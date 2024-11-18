@@ -19,6 +19,9 @@ use Devmakis\ProdCalendar\TransferredHoliday;
 use Devmakis\ProdCalendar\Weekend;
 use Devmakis\ProdCalendar\Year;
 
+/**
+ * @deprecated
+ */
 class DataGovClient implements IClient, ICachedClient
 {
     use Holidays;

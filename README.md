@@ -1,7 +1,6 @@
 ## Описание
 
-Библиотека для работы с производственным календарем России, Белоруссии, Казахстана и Узбекистана. 
-Реализованы клиенты для двух источников данных - [Data.gov.ru](https://data.gov.ru) или [xmlcalendar.ru](http://xmlcalendar.ru). 
+Библиотека для работы с производственным календарем России, Белоруссии, Казахстана и Узбекистана на основе [xmlcalendar.ru](http://xmlcalendar.ru). 
 Есть возможность реализовать свой клиент для получения данных от других источников.
 
 ## Установка
@@ -9,14 +8,6 @@
 `composer require devmakis/prodcalendar`
 
 ## Примеры использования
-
-```php
-use Devmakis\ProdCalendar\Clients\DataGovClient;
-use Devmakis\ProdCalendar\Calendar;
-
-$client = new DataGovClient('YOUR_TOKEN');
-$calendar = new Calendar($client);
-```
 
 ```php
 use Devmakis\ProdCalendar\Cache\FileJsonCache;
