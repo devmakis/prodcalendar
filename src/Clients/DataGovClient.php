@@ -16,7 +16,6 @@ use Devmakis\ProdCalendar\Weekend;
 use Devmakis\ProdCalendar\Year;
 
 /**
- * Client for obtaining production calendar data (from the Russian open data service Data.gov.ru)
  * @deprecated
  */
 class DataGovClient implements IClient, ICachedClient
