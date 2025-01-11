@@ -10,19 +10,29 @@ use Devmakis\ProdCalendar\Exceptions\CalendarException;
 
 class Calendar
 {
+    /**
+     * @deprecated
+     */
     public const string FORMAT_YEAR = 'Y';
 
+    /**
+     * @deprecated
+     */
     public const string FORMAT_MONTH = 'm';
 
+    /**
+     * @deprecated
+     */
     public const string FORMAT_DAY = 'd';
 
     /**
-     * @var Year[]
+     * @var array<int, Year>
      */
     protected array $years = [];
 
     public function __construct(
-        protected IClient $client
+        protected IClient $client,
+        protected bool $isCacheableYears = true
     ) {}
 
     /**
@@ -30,11 +40,15 @@ class Calendar
      */
     public function getYear(int $yearNumber): Year
     {
-        if (!isset($this->years[$yearNumber])) {
-            $this->years[$yearNumber] = $this->client->getYear($yearNumber);
+        if ($this->isCacheableYears) {
+            if (!isset($this->years[$yearNumber])) {
+                $this->years[$yearNumber] = $this->client->getYear($yearNumber);
+            }
+
+            return $this->years[$yearNumber];
         }
 
-        return $this->years[$yearNumber];
+        return $this->client->getYear($yearNumber);
     }
 
     /**
@@ -42,8 +56,8 @@ class Calendar
      */
     public function getMonth(\DateTimeInterface $date): ?Month
     {
-        $yearNumber = (int) $date->format(self::FORMAT_YEAR);
-        $monthNumber = (int) $date->format(self::FORMAT_MONTH);
+        $yearNumber = (int) $date->format('Y');
+        $monthNumber = (int) $date->format('m');
 
         return $this->getYear($yearNumber)->findMonth($monthNumber);
     }
@@ -54,8 +68,8 @@ class Calendar
      */
     public function findMonth(\DateTimeInterface $date): ?Month
     {
-        $yearNumber = (int) $date->format(self::FORMAT_YEAR);
-        $monthNumber = (int) $date->format(self::FORMAT_MONTH);
+        $yearNumber = (int) $date->format('Y');
+        $monthNumber = (int) $date->format('m');
 
         return $this->getYear($yearNumber)->getMonth($monthNumber);
     }
@@ -66,7 +80,7 @@ class Calendar
     public function getDay(\DateTimeInterface $date): ?Day
     {
         $month = $this->getMonth($date);
-        $dayNumber = (int) $date->format(self::FORMAT_DAY);
+        $dayNumber = (int) $date->format('d');
 
         return $month->getNonWorkingDay($dayNumber) ?? $month->getPreHolidayDay($dayNumber);
     }
@@ -78,7 +92,7 @@ class Calendar
     public function findDay(\DateTimeInterface $date): Day
     {
         $month = $this->findMonth($date);
-        $dayNumber = (int) $date->format(self::FORMAT_DAY);
+        $dayNumber = (int) $date->format('d');
 
         try {
             $day = $month->findNonWorkingDay($dayNumber);
@@ -191,7 +205,7 @@ class Calendar
                 $periodD = new \DatePeriod($begin, $intervalD, $endD, (int)$excludeBegin);
 
                 foreach ($periodD as $dateD) {
-                    if (!$month->getNonWorkingDay((int) $dateD->format(self::FORMAT_DAY))) {
+                    if (!$month->getNonWorkingDay((int) $dateD->format('d'))) {
                         $count++;
                     }
                 }
@@ -204,7 +218,7 @@ class Calendar
                 $periodD = new \DatePeriod($beginD, $intervalD, $end);
 
                 foreach ($periodD as $dateD) {
-                    if (!$month->getNonWorkingDay($dateD->format(self::FORMAT_DAY))) {
+                    if (!$month->getNonWorkingDay($dateD->format('d'))) {
                         $count++;
                     }
                 }
@@ -276,7 +290,7 @@ class Calendar
                 $periodD = new \DatePeriod($begin, $intervalD, $endD, (int)$excludeBegin);
 
                 foreach ($periodD as $dateD) {
-                    if ($month->getNonWorkingDay((int) $dateD->format(self::FORMAT_DAY))) {
+                    if ($month->getNonWorkingDay((int) $dateD->format('d'))) {
                         $count++;
                     }
                 }
@@ -289,7 +303,7 @@ class Calendar
                 $periodD = new \DatePeriod($beginD, $intervalD, $end);
 
                 foreach ($periodD as $dateD) {
-                    if ($month->getNonWorkingDay((int) $dateD->format(self::FORMAT_DAY))) {
+                    if ($month->getNonWorkingDay((int) $dateD->format('d'))) {
                         $count++;
                     }
                 }
@@ -315,5 +329,10 @@ class Calendar
         }
 
         return $date;
+    }
+
+    public function clearCacheableYears(): void
+    {
+        $this->years = [];
     }
 }

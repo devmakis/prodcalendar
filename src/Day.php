@@ -60,7 +60,7 @@ class Day
     public function __toString(): string
     {
         return $this->numberY . '-' .
-            \str_pad((string)$this->numberM, 2, '0', STR_PAD_LEFT) . '-' .
-            \str_pad((string)$this->numberD, 2, '0', STR_PAD_LEFT);
+            \str_pad((string) $this->numberM, 2, '0', STR_PAD_LEFT) . '-' .
+            \str_pad((string) $this->numberD, 2, '0', STR_PAD_LEFT);
     }
 }

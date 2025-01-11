@@ -31,8 +31,6 @@ class XmlCalendarClient implements IClient
 
     public const string API_LABEL_TRANSFERRED_HOLIDAY = '+';
 
-    protected array $data = [];
-
     protected null|int|\DateInterval $cacheTtl = null;
 
     public function __construct(
@@ -53,27 +51,23 @@ class XmlCalendarClient implements IClient
      */
     public function getYear(int $yearNumber): Year
     {
-        if (!isset($this->data[$yearNumber])) {
-            if ($this->cache) {
-                $this->data[$yearNumber] = $this->cache->get((string) $yearNumber);
-            }
+        $yearData = $this->cache?->get((string) $yearNumber);
 
-            if (!isset($this->data[$yearNumber])) {
-                $uri = \sprintf('%s/data/%s/%d/calendar.json', self::BASE_URI, $this->country, $yearNumber);
-                $request = new Request('GET', $uri);
-                $response = $this->httpClient->sendRequest($request);
-                $this->data[$yearNumber] = \json_decode($response->getBody()->getContents(), true);
-                $this->cache?->set((string) $yearNumber, $this->data[$yearNumber], $this->cacheTtl);
-            }
+        if (!$yearData) {
+            $uri = \sprintf('%s/data/%s/%d/calendar.json', self::BASE_URI, $this->country, $yearNumber);
+            $request = new Request('GET', $uri);
+            $response = $this->httpClient->sendRequest($request);
+            $yearData = \json_decode($response->getBody()->getContents(), true);
+            $this->cache?->set((string) $yearNumber, $yearData, $this->cacheTtl);
         }
 
-        if (!isset($this->data[$yearNumber])) {
+        if (!$yearData) {
             throw new ClientException($yearNumber . ' year not found');
         }
 
         $months = [];
 
-        foreach ($this->data[$yearNumber]['months'] as $monthData) {
+        foreach ($yearData['months'] as $monthData) {
             $monthNumber = (int) $monthData['month'];
             $days = \explode(self::API_DELIMITER_DAYS, $monthData['days'] ?? []);
             $nonWorkingDays = [];
@@ -127,16 +121,16 @@ class XmlCalendarClient implements IClient
 
         $year = new Year($yearNumber, $months);
 
-        if (isset($this->data[$yearNumber]['statistic']['hours40'])) {
-            $year->setNumberWorkingHours40((float) $this->data[$yearNumber]['statistic']['hours40']);
+        if (isset($yearData['statistic']['hours40'])) {
+            $year->setNumberWorkingHours40((float) $yearData['statistic']['hours40']);
         }
 
-        if (isset($this->data[$yearNumber]['statistic']['hours36'])) {
-            $year->setNumberWorkingHours36((float) $this->data[$yearNumber]['statistic']['hours36']);
+        if (isset($yearData['statistic']['hours36'])) {
+            $year->setNumberWorkingHours36((float) $yearData['statistic']['hours36']);
         }
 
-        if (isset($this->data[$yearNumber]['statistic']['hours24'])) {
-            $year->setNumberWorkingHours24((float) $this->data[$yearNumber]['statistic']['hours24']);
+        if (isset($yearData['statistic']['hours24'])) {
+            $year->setNumberWorkingHours24((float) $yearData['statistic']['hours24']);
         }
 
         return $year;
