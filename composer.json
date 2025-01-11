@@ -2,7 +2,8 @@
   "name": "devmakis/prodcalendar",
   "type": "library",
   "description": "Библиотека для работы с производственным календарем России, Белоруссии, Казахстана и Узбекистана. Production calendar library of Russia, Belarus, Kazakhstan and Uzbekistan.",
-  "homepage": "https://github.com/devmakis/prodcalendar.git",
+  "homepage": "https://github.com/devmakis/prodcalendar",
+  "keywords":["production", "working", "calendar", "production calendar", "working calendar", "production calendar", "working calendar", "Russian", "Belarus", "Kazakhstan", "Uzbekistan", "производственный", "календарь", "производственный календарь", "Россия", "РФ", "Беларусия", "Казахстан", "Узбекистан", "xmlcalendar"],
   "license": "MIT",
   "authors": [
     {
