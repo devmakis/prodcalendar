@@ -51,14 +51,15 @@ class XmlCalendarClient implements IClient
      */
     public function getYear(int $yearNumber): Year
     {
-        $yearData = $this->cache?->get((string) $yearNumber);
+        $cacheKey = $this->country . '-' . $yearNumber;
+        $yearData = $this->cache?->get($cacheKey);
 
         if (!$yearData) {
             $uri = \sprintf('%s/data/%s/%d/calendar.json', self::BASE_URI, $this->country, $yearNumber);
             $request = new Request('GET', $uri);
             $response = $this->httpClient->sendRequest($request);
             $yearData = \json_decode($response->getBody()->getContents(), true);
-            $this->cache?->set((string) $yearNumber, $yearData, $this->cacheTtl);
+            $this->cache?->set($cacheKey, $yearData, $this->cacheTtl);
         }
 
         if (!$yearData) {
