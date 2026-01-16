@@ -381,4 +381,31 @@ class Calendar
 
         return $date;
     }
+
+    /**
+     * Возвращает дату, смещённую на указанное количество рабочих дней.
+     * @param int $workdays (поддерживает отрицательные значения)
+     * @param \DateTime|null $date
+     * @return \DateTime
+     * @throws ClientException
+     */
+    public function applyWorkdayOffset(int $workdays, \DateTime $date = null): \DateTime
+    {
+        if ($date === null) {
+            $date = new \DateTime();
+        }
+
+        $current = clone $date;
+
+        while ($workdays !== 0) {
+            $step = $workdays > 0 ? '+1 day' : '-1 day';
+            $current->modify($step);
+
+            if (!$this->isNonWorking($current)) {
+                $workdays += $workdays > 0 ? -1 : 1;
+            }
+        }
+
+        return $current;
+    }
 }
