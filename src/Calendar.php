@@ -383,13 +383,11 @@ class Calendar
     }
 
     /**
-     * Возвращает дату, смещённую на указанное количество рабочих дней.
-     * @param int $workdays (поддерживает отрицательные значения)
-     * @param \DateTime|null $date
-     * @return \DateTime
+     * Returns the date shifted by the specified number of working days.
+     * @param int $workdays (negative values are allowed)
      * @throws ClientException
      */
-    public function applyWorkdayOffset(int $workdays, \DateTime $date = null): \DateTime
+    public function applyWorkdayOffset(int $workdays, \DateTimeInterface $date = null): \DateTimeInterface
     {
         if ($date === null) {
             $date = new \DateTime();
