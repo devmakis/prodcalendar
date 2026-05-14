@@ -52,3 +52,10 @@ $countWorkingDays = $year2018->countWorkingDays();
 $countNonWorkingDays = $year2018->countNonWorkingDays();
 $countWorkingDaysInMay = $year2018->getMonth('05')->countWorkingDays();
 ```
+
+Добавить или отнять количество рабочих дней от конкретной даты
+
+```php
+$date = $calendar->applyWorkdayOffset(new \DateTime('2026-05-01'), 10);
+$date = $calendar->applyWorkdayOffset(new \DateTime('2026-05-01'), -8);
+```

@@ -385,14 +385,11 @@ class Calendar
     /**
      * Returns the date shifted by the specified number of working days.
      * @param int $workdays (negative values are allowed)
+     * @return \DateTimeInterface
      * @throws ClientException
      */
-    public function applyWorkdayOffset(int $workdays, \DateTimeInterface $date = null): \DateTimeInterface
+    public function applyWorkdayOffset(\DateTimeInterface $date, $workdays)
     {
-        if ($date === null) {
-            $date = new \DateTime();
-        }
-
         $current = clone $date;
 
         while ($workdays !== 0) {
@@ -400,7 +397,7 @@ class Calendar
             $current->modify($step);
 
             if (!$this->isNonWorking($current)) {
-                $workdays += $workdays > 0 ? -1 : 1;
+                $workdays = $workdays > 0 ? $workdays - 1 : $workdays + 1;
             }
         }
 
