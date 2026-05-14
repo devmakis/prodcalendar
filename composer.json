@@ -1,5 +1,6 @@
 {
   "name": "devmakis/prodcalendar",
+  "version": "1.3.8",
   "type": "library",
   "description": "Библиотека для работы с производственным календарем России, Белоруссии, Казахстана и Узбекистана. Production calendar library of Russia, Belarus, Kazakhstan and Uzbekistan.",
   "homepage": "https://github.com/devmakis/prodcalendar",

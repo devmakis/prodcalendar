@@ -392,7 +392,7 @@ class Calendar
     {
         $current = clone $date;
 
-        while ($workdays !== 0) {
+        while ($workdays != 0) {
             $step = $workdays > 0 ? '+1 day' : '-1 day';
             $current->modify($step);
 
