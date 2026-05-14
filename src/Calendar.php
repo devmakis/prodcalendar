@@ -381,4 +381,26 @@ class Calendar
 
         return $date;
     }
+
+    /**
+     * Add or subtract the number of working days from a specific date.
+     * @param int $workdays (negative values are allowed)
+     * @return \DateTimeInterface
+     * @throws ClientException
+     */
+    public function applyWorkdayOffset(\DateTimeInterface $date, $workdays)
+    {
+        $current = clone $date;
+
+        while ($workdays !== 0) {
+            $step = $workdays > 0 ? '+1 day' : '-1 day';
+            $current->modify($step);
+
+            if (!$this->isNonWorking($current)) {
+                $workdays = $workdays > 0 ? $workdays - 1 : $workdays + 1;
+            }
+        }
+
+        return $current;
+    }
 }
