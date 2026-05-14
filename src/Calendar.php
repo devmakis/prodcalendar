@@ -383,7 +383,7 @@ class Calendar
     }
 
     /**
-     * Returns the date shifted by the specified number of working days.
+     * Add or subtract the number of working days from a specific date.
      * @param int $workdays (negative values are allowed)
      * @return \DateTimeInterface
      * @throws ClientException
